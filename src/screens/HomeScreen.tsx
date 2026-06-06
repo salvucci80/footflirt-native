@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
+
 
 interface Props {
   onConnect: (wallet: string) => void
@@ -9,29 +10,29 @@ interface Props {
 export default function HomeScreen({ onConnect }: Props) {
   const [connecting, setConnecting] = useState(false)
 
-  async function connectWallet() {
-    setConnecting(true)
-    try {
-      const result = await transact(async (wallet) => {
-        const auth = await wallet.authorize({
-          cluster: 'mainnet-beta',
-          identity: {
-            name: 'FootFlirt',
-            uri: 'https://footflirt.app',
-            icon: '/icon.png'
-          }
-        })
-        return auth
+async function connectWallet() {
+  setConnecting(true)
+  try {
+    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    const result = await transact(async (wallet: any) => {
+      const auth = await wallet.authorize({
+        cluster: 'mainnet-beta',
+        identity: {
+          name: 'FootFlirt',
+          uri: 'https://footflirt.app',
+          icon: '/icon.png'
+        }
       })
-      const address = result.accounts[0].address
-      onConnect(address)
-    } catch(e) {
-      console.log('Connection failed:', e)
-    } finally {
-      setConnecting(false)
-    }
+      return auth
+    })
+    const address = result.accounts[0].address
+    onConnect(address)
+  } catch(e: any) {
+    Alert.alert('Connection Error', e?.message || 'Failed to connect wallet. Please try again.')
+  } finally {
+    setConnecting(false)
   }
-
+}
   return (
     <View style={styles.container}>
       <Image source={require('../../assets/icon.png')} style={styles.logo} />
