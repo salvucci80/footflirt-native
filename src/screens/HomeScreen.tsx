@@ -8,29 +8,18 @@ interface Props {
 export default function HomeScreen({ onConnect }: Props) {
   const [connecting, setConnecting] = useState(false)
 
-  async function connectWallet() {
-    setConnecting(true)
-    try {
-      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-      const result = await transact(async (wallet: any) => {
-        const auth = await wallet.authorize({
-          cluster: 'mainnet-beta',
-          identity: {
-            name: 'FootFlirt',
-            uri: 'https://footflirt.app',
-            icon: '/icon.png'
-          }
-        })
-        return auth
-      })
-      const address = result.accounts[0].address
-      onConnect(address)
-    } catch(e: any) {
-      Alert.alert('Connection Error', e?.message || 'Failed to connect. Please try again.')
-    } finally {
-      setConnecting(false)
-    }
+ async function connectWallet() {
+  setConnecting(true)
+  try {
+    // Test if MWA is available
+    const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    Alert.alert('MWA loaded', 'transact: ' + typeof transact)
+  } catch(e: any) {
+    Alert.alert('MWA Error', e?.message || 'Unknown error')
+  } finally {
+    setConnecting(false)
   }
+}
 
   return (
     <View style={styles.container}>
