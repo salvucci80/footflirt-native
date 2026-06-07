@@ -11,11 +11,24 @@ export default function HomeScreen({ onConnect }: Props) {
  async function connectWallet() {
   setConnecting(true)
   try {
-    // Test if MWA is available
     const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    Alert.alert('MWA loaded', 'transact: ' + typeof transact)
+    Alert.alert('Calling transact...')
+    const result = await transact(async (wallet: any) => {
+      Alert.alert('Inside transact', 'wallet: ' + typeof wallet)
+      const auth = await wallet.authorize({
+        cluster: 'mainnet-beta',
+        identity: {
+          name: 'FootFlirt',
+          uri: 'https://footflirt.app',
+          icon: '/icon.png'
+        }
+      })
+      return auth
+    })
+    Alert.alert('Success', 'Address: ' + result.accounts[0].address)
+    onConnect(result.accounts[0].address)
   } catch(e: any) {
-    Alert.alert('MWA Error', e?.message || 'Unknown error')
+    Alert.alert('Error', e?.message || JSON.stringify(e))
   } finally {
     setConnecting(false)
   }
