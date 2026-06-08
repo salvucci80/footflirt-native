@@ -74,17 +74,20 @@ export default function FeedScreen({ wallet }: Props) {
 
               {bd.verdict ? <Text style={styles.verdict}>"{bd.verdict}"</Text> : null}
 
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.actBtn}>
-                  <Text style={styles.actText}>🤍 Fire</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actBtn}>
-                  <Text style={styles.actText}>💬 Comment</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actBtn}>
-                  <Text style={styles.actText}>📤 Share</Text>
-                </TouchableOpacity>
-              </View>
+             <View style={styles.actions}>
+  <TouchableOpacity style={styles.actBtn}>
+    <Text style={styles.actText}>💬 Comment</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={styles.actBtn}>
+    <Text style={styles.actText}>📤 Share</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={styles.actBtn}>
+    <Text style={styles.actText}>🚩 Report</Text>
+  </TouchableOpacity>
+</View>
+<TouchableOpacity style={styles.stickerToggle}>
+  <Text style={styles.stickerToggleText}>🎯 Drop a Sticker</Text>
+</TouchableOpacity>
             </View>
           </View>
         )
@@ -104,6 +107,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,45,120,.12)',
   },
+  stickerToggle: {
+  marginTop: 8,
+  backgroundColor: 'rgba(255,255,255,.05)',
+  borderRadius: 8,
+  padding: 10,
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,.08)',
+},
+stickerToggleText: { color: '#998aaa', fontSize: 12 },
   imageContainer: { position: 'relative', height: 220 },
   image: { width: '100%', height: '100%' },
   rankBadge: {
