@@ -6,13 +6,21 @@ interface Props {
 }
 
 const PACKS = [
-  { id:'starter', name:'Drip Starter', color:'#00FFB2', price:null, owned:true },
-  { id:'queen', name:'Queen Mode', color:'#FFD700', price:'0.03 SOL', owned:false },
-  { id:'celestial', name:'Celestial', color:'#C800FF', price:'0.03 SOL', owned:false },
-  { id:'street', name:'Street Heat', color:'#FF2D78', price:'0.01 SOL', owned:false },
-  { id:'luxe', name:'Luxe Drip', color:'#ff9500', price:'0.05 SOL', owned:false },
-  { id:'wild', name:'Wild Side', color:'#00FFB2', price:'0.01 SOL', owned:false },
+  { id:'starter', name:'Drip Starter', color:'#00FFB2', price:null, owned:true,
+    images:['startera','starterb','starterc','starterd','startere','starterf'] },
+  { id:'queen', name:'Queen Mode', color:'#FFD700', price:'0.03 SOL', owned:false,
+    images:['queena','queenb','queenc','queend','queene','queenf'] },
+  { id:'celestial', name:'Celestial', color:'#C800FF', price:'0.03 SOL', owned:false,
+    images:['celestiala','celestialb','celestialc','celestiald','celestiale','celestialf'] },
+  { id:'street', name:'Street Heat', color:'#FF2D78', price:'0.01 SOL', owned:false,
+    images:['streeta','streetb','streetc','streetd','streete','streetf'] },
+  { id:'luxe', name:'Luxe Drip', color:'#ff9500', price:'0.05 SOL', owned:false,
+    images:['luxea','luxeb','luxec','luxee','luxef','luxeg'] },
+  { id:'wild', name:'Wild Side', color:'#00FFB2', price:'0.01 SOL', owned:false,
+    images:['wilda','wildb','wildc','wildd','wilde','wildf'] },
 ]
+
+const BASE_URL = 'https://footflirt.app/'
 
 export default function ShopScreen({ wallet }: Props) {
   return (
@@ -28,6 +36,15 @@ export default function ShopScreen({ wallet }: Props) {
             <View style={[styles.badge, pack.owned ? styles.ownedBadge : styles.premiumBadge]}>
               <Text style={[styles.badgeText, pack.owned ? styles.ownedText : styles.premiumText]}>
                 {pack.owned ? 'OWNED' : 'PREMIUM'}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginVertical:10}}>
+  {pack.images.map((img, i) => (
+    <Image
+      key={img}
+      source={{uri: BASE_URL + img + '.png'}}
+      style={{width:60,height:60,borderRadius:10,marginRight:6,opacity:pack.owned || i < 2 ? 1 : 0.3}}
+    />
+  ))}
+</ScrollView>
               </Text>
             </View>
           </View>
