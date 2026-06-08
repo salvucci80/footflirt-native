@@ -4,6 +4,7 @@ import FeedScreen from './FeedScreen'
 import SubmitScreen from './SubmitScreen'
 import ShopScreen from './ShopScreen'
 import LeaderboardScreen from './LeaderboardScreen'
+import FlirtPassScreen from './FlirtPassScreen'
 
 interface Props {
   wallet: string
@@ -12,6 +13,7 @@ interface Props {
 
 export default function MainApp({ wallet, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
+ const [showFlirtPass, setShowFlirtPass] = useState(false) 
 
   return (
     <View style={styles.container}>
@@ -32,6 +34,7 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
         {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
         {tab === 'shop' && <ShopScreen wallet={wallet} />}
         {tab === 'leaderboard' && <LeaderboardScreen />}
+        {showFlirtPass && <FlirtPassScreen wallet={wallet} onBack={()=>setShowFlirtPass(false)} />}
       </View>
 
       <View style={styles.nav}>
@@ -52,6 +55,10 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
           <Text style={[styles.navIcon, tab==='leaderboard' && styles.navActive]}>🏆</Text>
           <Text style={[styles.navLabel, tab==='leaderboard' && styles.navActive]}>Top</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.navBtn} onPress={()=>setShowFlirtPass(true)}>
+  <Text style={styles.navIcon}>💎</Text>
+  <Text style={styles.navLabel}>Pass</Text>
+</TouchableOpacity>
       </View>
     </View>
   )
