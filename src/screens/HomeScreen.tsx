@@ -12,7 +12,6 @@ export default function HomeScreen({ onConnect }: Props) {
   setConnecting(true)
   try {
     const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    Alert.alert('Calling transact...')
     const result = await transact(async (wallet: any) => {
       Alert.alert('Inside transact', 'wallet: ' + typeof wallet)
       const auth = await wallet.authorize({
