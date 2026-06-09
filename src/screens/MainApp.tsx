@@ -13,7 +13,11 @@ interface Props {
 
 export default function MainApp({ wallet, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
- const [showFlirtPass, setShowFlirtPass] = useState(false) 
+  const [showFlirtPass, setShowFlirtPass] = useState(false)
+
+  if (showFlirtPass) {
+    return <FlirtPassScreen wallet={wallet} onBack={()=>setShowFlirtPass(false)} />
+  }
 
   return (
     <View style={styles.container}>
@@ -34,31 +38,30 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
         {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
         {tab === 'shop' && <ShopScreen wallet={wallet} />}
         {tab === 'leaderboard' && <LeaderboardScreen />}
-        {showFlirtPass && <FlirtPassScreen wallet={wallet} onBack={()=>setShowFlirtPass(false)} />}
       </View>
 
       <View style={styles.nav}>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('feed')}>
-          <Text style={[styles.navIcon, tab==='feed' && styles.navActive]}>🔥</Text>
+          <Text style={styles.navEmoji}>🔥</Text>
           <Text style={[styles.navLabel, tab==='feed' && styles.navActive]}>Feed</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('submit')}>
           <View style={styles.fab}>
-            <Text style={styles.fabIcon}>📸</Text>
+            <Text style={styles.fabEmoji}>📸</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('shop')}>
-          <Text style={[styles.navIcon, tab==='shop' && styles.navActive]}>🛍</Text>
+          <Text style={styles.navEmoji}>🛍️</Text>
           <Text style={[styles.navLabel, tab==='shop' && styles.navActive]}>Shop</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('leaderboard')}>
-          <Text style={[styles.navIcon, tab==='leaderboard' && styles.navActive]}>🏆</Text>
+          <Text style={styles.navEmoji}>🏆</Text>
           <Text style={[styles.navLabel, tab==='leaderboard' && styles.navActive]}>Top</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setShowFlirtPass(true)}>
-  <Text style={styles.navIcon}>💎</Text>
-  <Text style={styles.navLabel}>Pass</Text>
-</TouchableOpacity>
+          <Text style={styles.navEmoji}>💎</Text>
+          <Text style={styles.navLabel}>Pass</Text>
+        </TouchableOpacity>
       </View>
     </View>
   )
@@ -76,12 +79,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,45,120,.2)',
   },
-  logo: {
-    fontSize: 20,
-    color: '#FF2D78',
-    fontWeight: '900',
-    letterSpacing: 3,
-  },
+  logo: { fontSize: 20, color: '#FF2D78', fontWeight: '900', letterSpacing: 3 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   walletBadge: {
     backgroundColor: 'rgba(0,255,178,.1)',
@@ -111,7 +109,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   navBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navIcon: { fontSize: 22, color: '#555' },
+  navEmoji: { fontSize: 22 },
   navLabel: { fontSize: 10, color: '#555', marginTop: 2 },
   navActive: { color: '#FF2D78' },
   fab: {
@@ -123,5 +121,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -20,
   },
-  fabIcon: { fontSize: 22 },
+  fabEmoji: { fontSize: 22 },
 })

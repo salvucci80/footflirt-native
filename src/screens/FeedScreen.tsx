@@ -146,9 +146,6 @@ export default function FeedScreen({ wallet }: Props) {
               </View>
 
               <View style={styles.actions}>
-                <TouchableOpacity style={[styles.actBtn, isLiked && styles.actBtnLiked]} onPress={()=>setLiked(l=>{const n=new Set(l);n.has(post.id)?n.delete(post.id):n.add(post.id);return n})}>
-                  <Text style={styles.actText}>{isLiked ? 'Fire' : 'Fire'}</Text>
-                </TouchableOpacity>
                 <TouchableOpacity style={styles.actBtn} onPress={()=>{setCommentPost(post.id);loadComments(post.id)}}>
                   <Text style={styles.actText}>Comment</Text>
                 </TouchableOpacity>
