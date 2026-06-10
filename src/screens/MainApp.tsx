@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import FeedScreen from './FeedScreen'
 import SubmitScreen from './SubmitScreen'
 import ShopScreen from './ShopScreen'
@@ -42,25 +43,25 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
 
       <View style={styles.nav}>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('feed')}>
-          <Text style={styles.navEmoji}>🔥</Text>
+          <Ionicons name="flame" size={24} color={tab==='feed' ? '#FF2D78' : '#555'} />
           <Text style={[styles.navLabel, tab==='feed' && styles.navActive]}>Feed</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('submit')}>
           <View style={styles.fab}>
-            <Text style={styles.fabEmoji}>📸</Text>
+            <Ionicons name="camera" size={26} color="#fff" />
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('shop')}>
-          <Text style={styles.navEmoji}>🛍️</Text>
+          <Ionicons name="bag" size={24} color={tab==='shop' ? '#FF2D78' : '#555'} />
           <Text style={[styles.navLabel, tab==='shop' && styles.navActive]}>Shop</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setTab('leaderboard')}>
-          <Text style={styles.navEmoji}>🏆</Text>
+          <Ionicons name="trophy" size={24} color={tab==='leaderboard' ? '#FF2D78' : '#555'} />
           <Text style={[styles.navLabel, tab==='leaderboard' && styles.navActive]}>Top</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setShowFlirtPass(true)}>
-          <Text style={styles.navEmoji}>💎</Text>
-          <Text style={styles.navLabel}>Pass</Text>
+          <Ionicons name="diamond" size={24} color={showFlirtPass ? '#FFD700' : '#555'} />
+          <Text style={[styles.navLabel, showFlirtPass && styles.navActive]}>Pass</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -109,7 +110,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   navBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navEmoji: { fontSize: 22 },
   navLabel: { fontSize: 10, color: '#555', marginTop: 2 },
   navActive: { color: '#FF2D78' },
   fab: {
@@ -121,5 +121,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -20,
   },
-  fabEmoji: { fontSize: 22 },
 })
