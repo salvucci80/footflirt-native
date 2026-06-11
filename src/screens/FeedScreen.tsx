@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share, Modal } from 'react-native'
-const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share } from 'react-native'
+
 interface Props {
   wallet: string
+  onViewProfile: (username: string) => void
 }
 
 const FEET_URL = 'https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/feet%20v.png'
@@ -12,7 +13,7 @@ const CATS = ['nail_art','shape_arch','softness','vibe','shoe_pairing']
 const BASE_URL = 'https://footflirt.app/'
 const STARTER_STICKERS = ['startera.png','starterb.png','starterc.png','starterd.png','startere.png','starterf.png']
 
-export default function FeedScreen({ wallet }: Props) {
+export default function FeedScreen({ wallet, onViewProfile }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [commentPost, setCommentPost] = useState<string|null>(null)
@@ -21,7 +22,6 @@ export default function FeedScreen({ wallet }: Props) {
   const [comments, setComments] = useState<Record<string,any[]>>({})
   const [stickerPost, setStickerPost] = useState<string|null>(null)
   const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
-  const [liked, setLiked] = useState<Set<string>>(new Set())
   const [votes, setVotes] = useState<Record<string,number>>({})
 
   useEffect(() => {
@@ -59,17 +59,18 @@ export default function FeedScreen({ wallet }: Props) {
   }
 
   async function sendReport(postId: string, reason: string) {
-  try {
-    await fetch('https://footflirt.app/api/report', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({post_id: postId, reason})
-    })
-    Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
-  } catch(e) {
-    Alert.alert('Error', 'Failed to report. Try again.')
+    try {
+      await fetch('https://footflirt.app/api/report', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({post_id: postId, reason})
+      })
+      Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
+    } catch(e) {
+      Alert.alert('Error', 'Failed to report.')
+    }
   }
-}
+
   async function votePost(postId: string, stars: number) {
     setVotes(v => ({...v, [postId]: stars}))
     await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
@@ -89,7 +90,6 @@ export default function FeedScreen({ wallet }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:20}}>
       {posts.map((post, idx) => {
         const bd = post.score_breakdown || {}
-        const isLiked = liked.has(post.id)
         const myVote = votes[post.id] ?? 0
 
         return (
@@ -115,14 +115,23 @@ export default function FeedScreen({ wallet }: Props) {
               <View style={styles.judgeTag}>
                 <Text style={styles.judgeText}>AI Judge</Text>
               </View>
+              {(placedStickers[post.id]||[]).map((img, i) => (
+                <Image
+                  key={i}
+                  source={{uri: BASE_URL + img}}
+                  style={{position:'absolute', bottom:40+(i*55), left:10+(i*30), width:60, height:60}}
+                />
+              ))}
             </View>
 
             <View style={styles.body}>
               <View style={styles.userRow}>
-                <Text style={styles.username}>{post.username || '@anonymous'}</Text>
-               <TouchableOpacity style={styles.tipBtn}>
-  <Text style={styles.tipText}>💰 Tip</Text>
-</TouchableOpacity>
+                <TouchableOpacity onPress={()=>onViewProfile(post.username || '@anonymous')}>
+                  <Text style={styles.username}>{post.username || '@anonymous'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.tipBtn}>
+                  <Text style={styles.tipText}>💰 Tip</Text>
+                </TouchableOpacity>
               </View>
 
               {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
@@ -150,7 +159,7 @@ export default function FeedScreen({ wallet }: Props) {
               </View>
 
               <View style={styles.actions}>
-                <TouchableOpacity style={styles.actBtn} onPress={()=>{setCommentPost(post.id);loadComments(post.id)}}>
+                <TouchableOpacity style={styles.actBtn} onPress={()=>{setCommentPost(commentPost===post.id?null:post.id);loadComments(post.id)}}>
                   <Text style={styles.actText}>Comment</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actBtn} onPress={()=>Share.share({message:'Check out FootFlirt! https://footflirt.app'})}>
@@ -166,36 +175,27 @@ export default function FeedScreen({ wallet }: Props) {
               </TouchableOpacity>
 
               {stickerPost === post.id && (
-  <View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:8}}>
-      {STARTER_STICKERS.map(img => (
-        <TouchableOpacity key={img} onPress={()=>{
-          setPlacedStickers(prev => ({
-            ...prev,
-            [post.id]: [...(prev[post.id]||[]), img]
-          }))
-          setStickerPost(null)
-        }}>
-          <Image source={{uri: BASE_URL + img}} style={{width:48,height:48,borderRadius:8,marginRight:6}} />
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-    {(placedStickers[post.id]||[]).map((img, i) => (
-  <Image
-    key={i}
-    source={{uri: BASE_URL + img}}
-    style={{position:'absolute', bottom:40+i*50, left:10+i*30, width:60, height:60}}
-  />
-))}
-  </View>
-)}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:8}}>
+                  {STARTER_STICKERS.map(img => (
+                    <TouchableOpacity key={img} onPress={()=>{
+                      setPlacedStickers(prev => ({
+                        ...prev,
+                        [post.id]: [...(prev[post.id]||[]), img]
+                      }))
+                      setStickerPost(null)
+                    }}>
+                      <Image source={{uri: BASE_URL + img}} style={{width:56,height:56,borderRadius:8,marginRight:6}} />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
 
               {commentPost === post.id && (
                 <View style={styles.commentBox}>
                   {(comments[post.id]||[]).map((c:any,i:number)=>(
                     <View key={i} style={styles.commentItem}>
                       <Text style={styles.commentUser}>{c.username}</Text>
-                      <Text style={styles.commentText}>{c.content}</Text>
+                      <Text style={styles.commentContent}>{c.content}</Text>
                     </View>
                   ))}
                   <TextInput
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   judgeText: { color: '#00FFB2', fontSize: 10 },
   body: { padding: 14 },
   userRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  username: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  username: { color: '#FF2D78', fontSize: 14, fontWeight: '700' },
   tipBtn: { backgroundColor: '#FFD700', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 },
   tipText: { color: '#000', fontSize: 12, fontWeight: '700' },
   caption: { color: '#ccc', fontSize: 13, marginBottom: 10 },
@@ -284,7 +284,6 @@ const styles = StyleSheet.create({
     borderRadius: 8, padding: 8, alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(255,255,255,.08)',
   },
-  actBtnLiked: { backgroundColor: 'rgba(255,45,120,.15)', borderColor: 'rgba(255,45,120,.3)' },
   actText: { color: '#998aaa', fontSize: 10 },
   stickerToggle: {
     marginTop: 8, backgroundColor: 'rgba(255,255,255,.05)',
@@ -295,7 +294,7 @@ const styles = StyleSheet.create({
   commentBox: { marginTop: 10, backgroundColor: '#1C0030', borderRadius: 12, padding: 10 },
   commentItem: { marginBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,.05)', paddingBottom: 8 },
   commentUser: { color: '#00FFB2', fontSize: 11, fontWeight: '700' },
-  commentText: { color: '#ccc', fontSize: 12, marginTop: 2 },
+  commentContent: { color: '#ccc', fontSize: 12, marginTop: 2 },
   commentInput: {
     backgroundColor: '#120020', borderWidth: 1, borderColor: 'rgba(255,255,255,.1)',
     borderRadius: 8, padding: 10, color: '#fff', fontSize: 12, marginBottom: 6,
