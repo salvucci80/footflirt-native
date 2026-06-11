@@ -80,6 +80,64 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
     })
   }
 
+  function tipUser(post: any): void {
+    Alert.alert('Tip', 'How much SOL would you like to tip?', [
+      {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
+      {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
+      {text: '0.1 SOL', onPress: () => sendTip(post, 0.1)},
+      {text: 'Cancel', style: 'cancel'},
+    ])
+  }
+
+  async function sendTip(post: any, amount: number) {
+    try {
+      const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = require('@solana/web3.js')
+
+      await transact(async (walletAdapter: any) => {
+        const authResult = await walletAdapter.authorize({
+          cluster: 'mainnet-beta',
+          identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+        })
+
+        const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
+        const fromPubkey = new PublicKey(authResult.accounts[0].address)
+        const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
+
+        const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
+        const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
+
+        const tx = new Transaction()
+
+        if (post.wallet_address) {
+          tx.add(SystemProgram.transfer({
+            fromPubkey,
+            toPubkey: new PublicKey(post.wallet_address),
+            lamports: tipAmount
+          }))
+        }
+
+        tx.add(SystemProgram.transfer({
+          fromPubkey,
+          toPubkey: new PublicKey(FEE_WALLET),
+          lamports: feeAmount
+        }))
+
+        const { blockhash } = await connection.getLatestBlockhash()
+        tx.recentBlockhash = blockhash
+        tx.feePayer = fromPubkey
+
+        const signed = await walletAdapter.signTransactions({ transactions: [tx] })
+        const sig = await connection.sendRawTransaction(signed[0].serialize())
+        await connection.confirmTransaction(sig)
+
+        Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
+      })
+    } catch(e: any) {
+      Alert.alert('Error', e?.message || 'Failed to send tip')
+    }
+  }
+
   if (loading) return (
     <View style={styles.center}>
       <ActivityIndicator size="large" color="#FF2D78" />
@@ -91,6 +149,10 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
       {posts.map((post, idx) => {
         const bd = post.score_breakdown || {}
         const myVote = votes[post.id] ?? 0
+
+        function tipUser(post: any): void {
+          throw new Error('Function not implemented.')
+        }
 
         return (
           <View key={post.id} style={styles.card}>
@@ -129,9 +191,9 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
                 <TouchableOpacity onPress={()=>onViewProfile(post.username || '@anonymous')}>
                   <Text style={styles.username}>{post.username || '@anonymous'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.tipBtn}>
-                  <Text style={styles.tipText}>💰 Tip</Text>
-                </TouchableOpacity>
+<TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
+  <Text style={styles.tipText}>💰 Tip</Text>
+</TouchableOpacity>
               </View>
 
               {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
