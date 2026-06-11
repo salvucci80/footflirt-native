@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share, Modal } from 'react-native'
-
+const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
 interface Props {
   wallet: string
 }
@@ -20,6 +20,7 @@ export default function FeedScreen({ wallet }: Props) {
   const [commentName, setCommentName] = useState('')
   const [comments, setComments] = useState<Record<string,any[]>>({})
   const [stickerPost, setStickerPost] = useState<string|null>(null)
+  const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
   const [liked, setLiked] = useState<Set<string>>(new Set())
   const [votes, setVotes] = useState<Record<string,number>>({})
 
@@ -58,14 +59,17 @@ export default function FeedScreen({ wallet }: Props) {
   }
 
   async function sendReport(postId: string, reason: string) {
+  try {
     await fetch('https://footflirt.app/api/report', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({post_id: postId, reason})
     })
-    Alert.alert('Reported', 'Thank you for your report.')
+    Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
+  } catch(e) {
+    Alert.alert('Error', 'Failed to report. Try again.')
   }
-
+}
   async function votePost(postId: string, stars: number) {
     setVotes(v => ({...v, [postId]: stars}))
     await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
@@ -116,9 +120,9 @@ export default function FeedScreen({ wallet }: Props) {
             <View style={styles.body}>
               <View style={styles.userRow}>
                 <Text style={styles.username}>{post.username || '@anonymous'}</Text>
-                <TouchableOpacity style={styles.tipBtn}>
-                  <Text style={styles.tipText}>Tip</Text>
-                </TouchableOpacity>
+               <TouchableOpacity style={styles.tipBtn}>
+  <Text style={styles.tipText}>💰 Tip</Text>
+</TouchableOpacity>
               </View>
 
               {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
@@ -162,14 +166,29 @@ export default function FeedScreen({ wallet }: Props) {
               </TouchableOpacity>
 
               {stickerPost === post.id && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:8}}>
-                  {STARTER_STICKERS.map(img => (
-                    <TouchableOpacity key={img} onPress={()=>{Alert.alert('Sticker dropped!');setStickerPost(null)}}>
-                      <Image source={{uri: BASE_URL + img}} style={{width:48,height:48,borderRadius:8,marginRight:6}} />
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
+  <View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:8}}>
+      {STARTER_STICKERS.map(img => (
+        <TouchableOpacity key={img} onPress={()=>{
+          setPlacedStickers(prev => ({
+            ...prev,
+            [post.id]: [...(prev[post.id]||[]), img]
+          }))
+          setStickerPost(null)
+        }}>
+          <Image source={{uri: BASE_URL + img}} style={{width:48,height:48,borderRadius:8,marginRight:6}} />
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+    {(placedStickers[post.id]||[]).map((img, i) => (
+  <Image
+    key={i}
+    source={{uri: BASE_URL + img}}
+    style={{position:'absolute', bottom:40+i*50, left:10+i*30, width:60, height:60}}
+  />
+))}
+  </View>
+)}
 
               {commentPost === post.id && (
                 <View style={styles.commentBox}>
