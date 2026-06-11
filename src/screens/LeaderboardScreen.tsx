@@ -7,7 +7,7 @@ const MEDALS = ['🥇','🥈','🥉']
 export default function LeaderboardScreen() {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'score'|'votes'|'tips'>('score')
+ const [tab, setTab] = useState<'score'|'votes'>('score')
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=50')
@@ -17,17 +17,15 @@ export default function LeaderboardScreen() {
       .finally(() => setLoading(false))
   }, [])
 
-  const sorted = [...posts].sort((a, b) => {
-    if (tab === 'score') return (b.ai_score || 0) - (a.ai_score || 0)
-    if (tab === 'votes') return (b.community_votes || 0) - (a.community_votes || 0)
-    return (b.sol_tips_received || 0) - (a.sol_tips_received || 0)
-  }).slice(0, 10)
-
+const sorted = [...posts].sort((a, b) => {
+  if (tab === 'score') return (b.ai_score || 0) - (a.ai_score || 0)
+  return (b.community_votes || 0) - (a.community_votes || 0)
+}).slice(0, 10)
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Leaderboard</Text>
       <View style={styles.tabs}>
-        {(['score','votes','tips'] as const).map(t => (
+        {(['score','votes'] as const).map(t => (
           <TouchableOpacity key={t} onPress={()=>setTab(t)} style={[styles.tab, tab===t && styles.activeTab]}>
             <Text style={[styles.tabText, tab===t && styles.activeTabText]}>
               {t === 'score' ? 'AI Score' : t === 'votes' ? 'Most Voted' : 'Most Tipped'}
@@ -54,7 +52,6 @@ export default function LeaderboardScreen() {
               <View style={styles.stat}>
                 {tab === 'score' && <Text style={styles.statNum}>{post.ai_score}</Text>}
                 {tab === 'votes' && <Text style={styles.statNum}>{post.community_votes}</Text>}
-                {tab === 'tips' && <Text style={styles.statNum}>{post.sol_tips_received}</Text>}
                 <Text style={styles.statLabel}>
                   {tab === 'score' ? '/10' : tab === 'votes' ? 'votes' : 'SOL'}
                 </Text>
