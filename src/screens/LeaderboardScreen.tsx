@@ -4,7 +4,11 @@ import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIn
 const FEET_URL = 'https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/feet%20v.png'
 const MEDALS = ['🥇','🥈','🥉']
 
-export default function LeaderboardScreen() {
+interface Props {
+  onViewProfile: (username: string) => void
+}
+
+export default function LeaderboardScreen({ onViewProfile }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
  const [tab, setTab] = useState<'score'|'votes'>('score')
@@ -46,7 +50,9 @@ const sorted = [...posts].sort((a, b) => {
                 style={styles.thumb}
               />
               <View style={styles.info}>
-                <Text style={styles.username}>{post.username || '@anonymous'}</Text>
+               <TouchableOpacity onPress={()=>onViewProfile(post.username || '@anonymous')}>
+  <Text style={styles.username}>{post.username || '@anonymous'}</Text>
+</TouchableOpacity>
                 <Text style={styles.caption} numberOfLines={1}>{post.caption || 'No caption'}</Text>
               </View>
               <View style={styles.stat}>

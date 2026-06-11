@@ -6,6 +6,7 @@ import SubmitScreen from './SubmitScreen'
 import ShopScreen from './ShopScreen'
 import LeaderboardScreen from './LeaderboardScreen'
 import FlirtPassScreen from './FlirtPassScreen'
+import ProfileScreen from './ProfileScreen'
 
 interface Props {
   wallet: string
@@ -15,9 +16,14 @@ interface Props {
 export default function MainApp({ wallet, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
   const [showFlirtPass, setShowFlirtPass] = useState(false)
+  const [viewProfile, setViewProfile] = useState<string|null>(null)
 
   if (showFlirtPass) {
     return <FlirtPassScreen wallet={wallet} onBack={()=>setShowFlirtPass(false)} />
+  }
+
+  if (viewProfile) {
+    return <ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} />
   }
 
   return (
@@ -35,10 +41,10 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
       </View>
 
       <View style={styles.main}>
-        {tab === 'feed' && <FeedScreen wallet={wallet} />}
+        {tab === 'feed' && <FeedScreen wallet={wallet} onViewProfile={setViewProfile} />}
         {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
         {tab === 'shop' && <ShopScreen wallet={wallet} />}
-        {tab === 'leaderboard' && <LeaderboardScreen />}
+        {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
       </View>
 
       <View style={styles.nav}>
@@ -61,7 +67,7 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setShowFlirtPass(true)}>
           <Ionicons name="diamond" size={24} color={showFlirtPass ? '#FFD700' : '#555'} />
-          <Text style={[styles.navLabel, showFlirtPass && styles.navActive]}>Pass</Text>
+          <Text style={styles.navLabel}>Pass</Text>
         </TouchableOpacity>
       </View>
     </View>
