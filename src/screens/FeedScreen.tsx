@@ -190,7 +190,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
                   <Text style={styles.username}>{post.username || '@anonymous'}</Text>
                 </TouchableOpacity>
 <TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
-  <Text style={styles.tipText}>ðŸ’° Tip</Text>
+  <Text style={styles.tipText}>💰 Tip</Text>
 </TouchableOpacity>
               </View>
 
@@ -212,7 +212,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
                 <Text style={styles.voteLabel}>Rate:</Text>
                 {[1,2,3,4,5].map(s => (
                   <TouchableOpacity key={s} onPress={() => votePost(post.id, s)}>
-                    <Text style={[styles.star, myVote >= s && styles.starLit]}>â˜…</Text>
+                    <Text style={[styles.star, myVote >= s && styles.starLit]}>★</Text>
                   </TouchableOpacity>
                 ))}
                 <Text style={styles.voteCount}>{post.community_votes} votes</Text>
@@ -365,3 +365,4 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 })
+
