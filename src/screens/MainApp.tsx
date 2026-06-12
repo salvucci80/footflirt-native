@@ -32,6 +32,9 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
         <Text style={styles.logo}>FOOTFLIRT</Text>
         <View style={styles.headerRight}>
           <View style={styles.walletBadge}>
+            <TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(wallet)}>
+  <Text style={styles.profileBtnText}>Me</Text>
+</TouchableOpacity>
             <Text style={styles.walletText}>{wallet.slice(0,4)}...{wallet.slice(-4)}</Text>
           </View>
           <TouchableOpacity style={styles.outBtn} onPress={onDisconnect}>
@@ -127,4 +130,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -20,
   },
+  profileBtn: {
+  backgroundColor: 'rgba(200,0,255,.15)',
+  borderWidth: 1,
+  borderColor: 'rgba(200,0,255,.3)',
+  borderRadius: 20,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+},
+profileBtnText: { color: '#C800FF', fontSize: 11, fontWeight: '700' },
 })
