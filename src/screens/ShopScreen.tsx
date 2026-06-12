@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 
 interface Props {
@@ -48,9 +48,8 @@ async function processPurchase(pack: any) {
       const { blockhash } = await connection.getLatestBlockhash()
       tx.recentBlockhash = blockhash
       tx.feePayer = fromPubkey
-      const signed = await walletAdapter.signTransactions({ transactions: [tx] })
-      const sig = await connection.sendRawTransaction(signed[0].serialize())
-      await connection.confirmTransaction(sig)
+const results = await walletAdapter.signAndSendTransactions({ transactions: [tx] })
+      const sig = results[0]
       await fetch('https://footflirt.app/api/purchase', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},

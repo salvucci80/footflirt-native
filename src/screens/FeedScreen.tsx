@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share } from 'react-native'
 
 interface Props {
@@ -127,9 +127,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
         tx.recentBlockhash = blockhash
         tx.feePayer = fromPubkey
 
-        const signed = await walletAdapter.signTransactions({ transactions: [tx] })
-        const sig = await connection.sendRawTransaction(signed[0].serialize())
-        await connection.confirmTransaction(sig)
+        const result = await walletAdapter.signAndSendTransactions({ transactions: [tx] })
 
         Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
       })
@@ -192,7 +190,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
                   <Text style={styles.username}>{post.username || '@anonymous'}</Text>
                 </TouchableOpacity>
 <TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
-  <Text style={styles.tipText}>💰 Tip</Text>
+  <Text style={styles.tipText}>ðŸ’° Tip</Text>
 </TouchableOpacity>
               </View>
 
@@ -214,7 +212,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
                 <Text style={styles.voteLabel}>Rate:</Text>
                 {[1,2,3,4,5].map(s => (
                   <TouchableOpacity key={s} onPress={() => votePost(post.id, s)}>
-                    <Text style={[styles.star, myVote >= s && styles.starLit]}>★</Text>
+                    <Text style={[styles.star, myVote >= s && styles.starLit]}>â˜…</Text>
                   </TouchableOpacity>
                 ))}
                 <Text style={styles.voteCount}>{post.community_votes} votes</Text>

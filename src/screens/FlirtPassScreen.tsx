@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 
 interface Props {
@@ -36,9 +36,7 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
         tx.recentBlockhash = blockhash
         tx.feePayer = fromPubkey
         
-        const signed = await walletAdapter.signTransactions({ transactions: [tx] })
-        const sig = await connection.sendRawTransaction(signed[0].serialize())
-        await connection.confirmTransaction(sig)
+        await walletAdapter.signAndSendTransactions({ transactions: [tx] })
         
         await fetch('https://footflirt.app/api/extras?action=flirtpass', {
           method: 'POST',
@@ -47,7 +45,7 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
         })
         
         setActive(true)
-        Alert.alert('FlirtPass activated! 💎')
+        Alert.alert('FlirtPass activated! ðŸ’Ž')
       })
     } catch(e: any) {
       Alert.alert('Error', e?.message || 'Failed to subscribe')
@@ -63,7 +61,7 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.diamond}>💎</Text>
+        <Text style={styles.diamond}>ðŸ’Ž</Text>
         <Text style={styles.title}>FlirtPass</Text>
         <Text style={styles.subtitle}>Premium membership for serious creators</Text>
 
@@ -83,7 +81,7 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
             ['Early access to new features', 'before everyone else'],
           ].map(([title, sub]) => (
             <View key={title} style={styles.featureRow}>
-              <Text style={styles.check}>✓</Text>
+              <Text style={styles.check}>âœ“</Text>
               <View>
                 <Text style={styles.featureTitle}>{title}</Text>
                 <Text style={styles.featureSub}>{sub}</Text>

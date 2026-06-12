@@ -61,6 +61,10 @@ export default function HomeScreen({ onConnect }: Props) {
           <Text style={styles.connectText}>Connect Wallet</Text>
         )}
       </TouchableOpacity>
+      <TouchableOpacity onPress={()=>require('react-native').Linking.openURL('https://solflare.com')} style={{marginTop:8,marginBottom:8}}>
+  <Text style={{color:'#998aaa',fontSize:12,textAlign:'center'}}>Don't have a wallet? Get Solflare</Text>
+</TouchableOpacity>
+
     </View>
   )
 }
