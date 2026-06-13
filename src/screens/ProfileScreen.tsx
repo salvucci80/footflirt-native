@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Share } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 
 interface Props {
   username: string
@@ -19,9 +20,7 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
   useEffect(() => {
     fetch('https://footflirt.app/api/extras?action=follow&wallet=' + wallet)
       .then(r => r.json())
-      .then(data => {
-        if (data.following) setIsFollowing(data.following.includes(username))
-      })
+      .then(data => { if (data.following) setIsFollowing(data.following.includes(username)) })
       .catch(() => {})
   }, [wallet, username])
 
@@ -39,8 +38,7 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
         const userPosts = (data.posts || []).filter((p: any) => p.username === username)
         setPosts(userPosts)
         const avgScore = userPosts.length > 0
-          ? userPosts.reduce((s: number, p: any) => s + (p.ai_score || 0), 0) / userPosts.length
-          : 0
+          ? userPosts.reduce((s: number, p: any) => s + (p.ai_score || 0), 0) / userPosts.length : 0
         const totalTips = userPosts.reduce((s: number, p: any) => s + (p.sol_tips_received || 0), 0)
         setStats({ totalPosts: userPosts.length, avgScore: parseFloat(avgScore.toFixed(1)), totalTips })
       })
@@ -51,15 +49,13 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
   async function toggleFollow() {
     if (isFollowing) {
       await fetch('https://footflirt.app/api/extras?action=follow', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ follower_wallet: wallet, following_username: username })
       })
       setIsFollowing(false)
     } else {
       await fetch('https://footflirt.app/api/extras?action=follow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ follower_wallet: wallet, following_username: username })
       })
       setIsFollowing(true)
@@ -68,47 +64,66 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{username}</Text>
+        <TouchableOpacity onPress={()=>Share.share({message:`Check out ${username} on FootFlirt! https://footflirt.app`})}>
+          <Ionicons name="share-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-      <ScrollView contentContainerStyle={{paddingBottom: 20}}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <Text style={styles.username}>{username}</Text>
-            {username !== '@anonymous' && (
-              <TouchableOpacity style={[styles.followBtn, isFollowing && styles.followingBtn]} onPress={toggleFollow}>
-                <Text style={[styles.followText, isFollowing && styles.followingText]}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>
-              </TouchableOpacity>
-            )}
+      <ScrollView>
+        <View style={styles.profileTop}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{username.slice(1,3).toUpperCase()}</Text>
           </View>
+          <Text style={styles.username}>{username}</Text>
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <Text style={[styles.statNum, {color:'#FF2D78'}]}>{stats.totalPosts}</Text>
+              <Text style={styles.statNum}>{stats.totalPosts}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
+            <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={[styles.statNum, {color:'#FFD700'}]}>{stats.avgScore}</Text>
               <Text style={styles.statLabel}>Avg Score</Text>
             </View>
+            <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={[styles.statNum, {color:'#00FFB2'}]}>{stats.totalTips}</Text>
-              <Text style={styles.statLabel}>Tips SOL</Text>
+              <Text style={styles.statLabel}>SOL Earned</Text>
             </View>
+            <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={[styles.statNum, {color:'#C800FF'}]}>{referralCount}</Text>
               <Text style={styles.statLabel}>Referrals</Text>
             </View>
           </View>
+
+          {username !== '@anonymous' && (
+            <TouchableOpacity
+              style={[styles.followBtn, isFollowing && styles.followingBtn]}
+              onPress={toggleFollow}
+            >
+              <Text style={[styles.followText, isFollowing && styles.followingText]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        <View style={styles.divider} />
 
         {loading ? (
           <ActivityIndicator color="#FF2D78" style={{marginTop: 40}} />
         ) : posts.length === 0 ? (
-          <Text style={styles.empty}>No posts yet</Text>
+          <View style={styles.empty}>
+            <Ionicons name="images-outline" size={48} color="#333" />
+            <Text style={styles.emptyText}>No posts yet</Text>
+          </View>
         ) : (
           <View style={styles.grid}>
             {posts.map(post => (
@@ -131,33 +146,45 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#080010' },
-  backBtn: { padding: 16, paddingTop: 48 },
-  backText: { color: '#fff', fontSize: 14 },
-  profileCard: {
-    margin: 14, backgroundColor: '#120020', borderRadius: 18,
-    padding: 16, borderWidth: 1, borderColor: 'rgba(255,45,120,.2)',
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, paddingTop: 48,
+    backgroundColor: '#0d0018',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,45,120,.2)',
   },
-  profileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  username: { fontSize: 22, color: '#fff', fontWeight: '700' },
+  headerTitle: { fontSize: 16, color: '#fff', fontWeight: '700' },
+  profileTop: { alignItems: 'center', padding: 24 },
+  avatar: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#FF2D78',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 3, borderColor: 'rgba(255,45,120,.3)',
+  },
+  avatarText: { color: '#fff', fontSize: 28, fontWeight: '900' },
+  username: { fontSize: 22, color: '#fff', fontWeight: '700', marginBottom: 20 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, width: '100%', justifyContent: 'center' },
+  stat: { alignItems: 'center', paddingHorizontal: 12 },
+  statNum: { fontSize: 20, color: '#FF2D78', fontWeight: '900' },
+  statLabel: { fontSize: 10, color: '#998aaa', marginTop: 2 },
+  statDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,.1)' },
   followBtn: {
     backgroundColor: '#FF2D78', borderRadius: 20,
-    paddingHorizontal: 18, paddingVertical: 8,
+    paddingHorizontal: 32, paddingVertical: 10,
   },
-  followingBtn: { backgroundColor: 'rgba(255,45,120,.15)', borderWidth: 1, borderColor: 'rgba(255,45,120,.3)' },
-  followText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  followingBtn: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#FF2D78' },
+  followText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   followingText: { color: '#FF2D78' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  stat: { alignItems: 'center' },
-  statNum: { fontSize: 20, fontWeight: '900' },
-  statLabel: { fontSize: 11, color: '#998aaa', marginTop: 2 },
-  empty: { color: '#998aaa', textAlign: 'center', padding: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 10, gap: 4 },
-  gridItem: { width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,.07)', marginHorizontal: 16 },
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: '#555', fontSize: 14, marginTop: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 2 },
+  gridItem: { width: '33.33%', aspectRatio: 1, padding: 1, position: 'relative' },
   gridImage: { width: '100%', height: '100%' },
   gridScore: {
     position: 'absolute', bottom: 4, right: 4,
     backgroundColor: 'rgba(0,0,0,.7)', borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 2,
+    paddingHorizontal: 4, paddingVertical: 2,
   },
-  gridScoreText: { color: '#FFD700', fontSize: 11, fontWeight: '700' },
+  gridScoreText: { color: '#FFD700', fontSize: 10, fontWeight: '700' },
 })

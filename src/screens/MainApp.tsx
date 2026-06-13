@@ -10,10 +10,11 @@ import ProfileScreen from './ProfileScreen'
 
 interface Props {
   wallet: string
+  username: string
   onDisconnect: () => void
 }
 
-export default function MainApp({ wallet, onDisconnect }: Props) {
+export default function MainApp({ wallet, username, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
   const [showFlirtPass, setShowFlirtPass] = useState(false)
   const [viewProfile, setViewProfile] = useState<string|null>(null)
@@ -32,8 +33,8 @@ export default function MainApp({ wallet, onDisconnect }: Props) {
         <Text style={styles.logo}>FOOTFLIRT</Text>
         <View style={styles.headerRight}>
           <View style={styles.walletBadge}>
-            <TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(wallet)}>
-  <Text style={styles.profileBtnText}>Me</Text>
+<TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(username)}>
+  <Text style={styles.profileBtnText}>{username}</Text>
 </TouchableOpacity>
             <Text style={styles.walletText}>{wallet.slice(0,4)}...{wallet.slice(-4)}</Text>
           </View>
