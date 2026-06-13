@@ -61,29 +61,37 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     setPhase('result')
   }
 
-  async function post() {
-    setPhase('posting')
-    try {
-      const formData = new FormData()
-      formData.append('file', { uri: image!, name: 'post.jpg', type: 'image/jpeg' } as any)
-      const uploadRes = await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/post-${Date.now()}.jpg`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`, 'Content-Type': 'image/jpeg' },
-        body: formData,
-      })
-      const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/post-${Date.now()}.jpg`
-      await fetch('https://footflirt.app/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
-      })
-      onPost()
-    } catch(e) {
-      Alert.alert('Post failed')
-      setPhase('result')
-    }
-  }
+ async function post() {
+  setPhase('posting')
+  try {
+    const timestamp = Date.now()
+    const filename = `post-${timestamp}.jpg`
+    
+    const formData = new FormData()
+    formData.append('file', { uri: image!, name: filename, type: 'image/jpeg' } as any)
+    
+    await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`,
+        'x-upsert': 'true',
+      },
+      body: formData,
+    })
 
+    const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
+    
+    await fetch('https://footflirt.app/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
+    })
+    onPost()
+  } catch(e: any) {
+    Alert.alert('Post failed', e?.message || 'Please try again')
+    setPhase('result')
+  }
+}
   if (phase === 'upload') return (
     <View style={styles.container}>
       <Text style={styles.title}>Share Your Feet</Text>
