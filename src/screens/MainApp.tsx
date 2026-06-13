@@ -31,17 +31,14 @@ export default function MainApp({ wallet, username, onDisconnect }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>FOOTFLIRT</Text>
-        <View style={styles.headerRight}>
-          <View style={styles.walletBadge}>
-<TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(username)}>
-  <Text style={styles.profileBtnText}>{username}</Text>
-</TouchableOpacity>
-            <Text style={styles.walletText}>{wallet.slice(0,4)}...{wallet.slice(-4)}</Text>
-          </View>
+<View style={styles.headerRight}>
+          <TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(username)}>
+            <Text style={styles.profileBtnText}>{username}</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.outBtn} onPress={onDisconnect}>
             <Text style={styles.outText}>Out</Text>
           </TouchableOpacity>
-        </View>
+      </View>
       </View>
 
       <View style={styles.main}>
