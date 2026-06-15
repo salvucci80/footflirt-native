@@ -90,51 +90,53 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
   }
 
   async function sendTip(post: any, amount: number) {
-    try {
-      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+  try {
+    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    const web3 = await import('@solana/web3.js')
+    const { transact } = mwaModule
+    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
-      await transact(async (walletAdapter: any) => {
-        const authResult = await walletAdapter.authorize({
-          cluster: 'mainnet-beta',
-          identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-        })
+    await transact(async (walletAdapter: any) => {
+      const authResult = await walletAdapter.authorize({
+        cluster: 'mainnet-beta',
+        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+      })
 
-        const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-        const fromPubkey = new PublicKey(authResult.accounts[0].address)
-        const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
+      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
+      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+      const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
 
-        const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
-        const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
+      const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
+      const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
 
-        const tx = new Transaction()
+      const tx = new Transaction()
 
-        if (post.wallet_address) {
-          tx.add(SystemProgram.transfer({
-            fromPubkey,
-            toPubkey: new PublicKey(post.wallet_address),
-            lamports: tipAmount
-          }))
-        }
-
+      if (post.wallet_address) {
         tx.add(SystemProgram.transfer({
           fromPubkey,
-          toPubkey: new PublicKey(FEE_WALLET),
-          lamports: feeAmount
+          toPubkey: new PublicKey(post.wallet_address),
+          lamports: tipAmount
         }))
+      }
 
-        const { blockhash } = await connection.getLatestBlockhash()
-        tx.recentBlockhash = blockhash
-        tx.feePayer = fromPubkey
+      tx.add(SystemProgram.transfer({
+        fromPubkey,
+        toPubkey: new PublicKey(FEE_WALLET),
+        lamports: feeAmount
+      }))
 
-        const result = await walletAdapter.signAndSendTransactions({ transactions: [tx] })
+      const { blockhash } = await connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.feePayer = fromPubkey
 
-        Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
-      })
-    } catch(e: any) {
-      Alert.alert('Error', e?.message || 'Failed to send tip')
-    }
+      await walletAdapter.signAndSendTransactions({ transactions: [tx] })
+
+      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
+    })
+  } catch(e: any) {
+    Alert.alert('Tip Error', String(e?.message || e))
   }
+}
 
   if (loading) return (
     <View style={styles.center}>
