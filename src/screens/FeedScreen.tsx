@@ -80,7 +80,7 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
     })
   }
 
-  function tipUser(post: any): void {
+  async function tipUser(post: any) {
     Alert.alert('Tip', 'How much SOL would you like to tip?', [
       {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
       {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
