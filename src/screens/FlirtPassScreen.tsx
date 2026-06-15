@@ -14,37 +14,46 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
   const [active, setActive] = useState(false)
 
   async function subscribe() {
-    setBuying(true)
-    try {const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
-      await transact(async (walletAdapter: any) => {
-        const authResult = await walletAdapter.authorize({
-          cluster: 'mainnet-beta',
-          identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-        })
-        const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-        const fromPubkey = new PublicKey(authResult.accounts[0].address)
-        const tx = new Transaction().add(
-          SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: PRICE_SOL * LAMPORTS_PER_SOL })
-        )
-        const { blockhash } = await connection.getLatestBlockhash()
-        tx.recentBlockhash = blockhash
-        tx.feePayer = fromPubkey
-        await walletAdapter.signAndSendTransactions({ transactions: [tx] })
-        await fetch('https://footflirt.app/api/extras?action=flirtpass', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet_address: wallet, tx_signature: 'native' })
-        })
-        setActive(true)
-        Alert.alert('FlirtPass activated!')
+  setBuying(true)
+  try {
+    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    const web3 = await import('@solana/web3.js')
+    const { transact } = mwaModule
+    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
+
+    await transact(async (walletAdapter: any) => {
+      const authResult = await walletAdapter.authorize({
+        cluster: 'mainnet-beta',
+        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
       })
-    } catch(e: any) {
-      Alert.alert('Error', e?.message || 'Failed to subscribe')
-    } finally {
-      setBuying(false)
-    }
+
+      Alert.alert('Authorized', 'Got wallet: ' + authResult.accounts[0].address.slice(0,8))
+
+      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
+      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+      const tx = new Transaction().add(
+        SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: PRICE_SOL * LAMPORTS_PER_SOL })
+      )
+      const { blockhash } = await connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.feePayer = fromPubkey
+
+      await walletAdapter.signAndSendTransactions({ transactions: [tx] })
+
+      await fetch('https://footflirt.app/api/extras?action=flirtpass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: wallet, tx_signature: 'native' })
+      })
+      setActive(true)
+      Alert.alert('FlirtPass activated!')
+    })
+  } catch(e: any) {
+    Alert.alert('Subscribe Error', String(e?.message || e))
+  } finally {
+    setBuying(false)
   }
+}
 
   return (
     <View style={styles.container}>
