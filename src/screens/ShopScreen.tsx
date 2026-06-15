@@ -31,8 +31,8 @@ async function buyPack(pack: any) {
 
 async function processPurchase(pack: any) {
   try {
-    const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = require('@solana/web3.js')
+    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
     const amount = parseFloat(pack.price)
     await transact(async (walletAdapter: any) => {
       const authResult = await walletAdapter.authorize({
