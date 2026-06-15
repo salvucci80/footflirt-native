@@ -15,9 +15,8 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
 
   async function subscribe() {
     setBuying(true)
-    try {
-      const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = require('@solana/web3.js')
+    try {const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
       await transact(async (walletAdapter: any) => {
         const authResult = await walletAdapter.authorize({
           cluster: 'mainnet-beta',
