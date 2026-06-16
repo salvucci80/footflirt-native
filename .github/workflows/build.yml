@@ -31,6 +31,9 @@ jobs:
       - name: Install Expo CLI
         run: npm install -g expo-cli @expo/cli
 
+      - name: Clear Gradle cache
+        run: rm -rf ~/.gradle/caches
+
       - name: Prebuild Android
         run: npx expo prebuild --platform android --clean
 
