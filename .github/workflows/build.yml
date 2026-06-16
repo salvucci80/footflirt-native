@@ -1,4 +1,4 @@
-oname: Build Android APK
+name: Build Android APK
 
 on:
   push:
@@ -28,27 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Prebuild
-        run: npx expo prebuild --platform android --clean
-
-      - name: Fix Gradle and Kotlin versions
-        run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip|' android/gradle/wrapper/gradle-wrapper.properties
-          EXPO_PLUGIN=$(node --print "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
-          EXPO_GRADLE_DIR=$(dirname $EXPO_PLUGIN)/../android/expo-gradle-plugin
-          echo "Expo gradle plugin path: $EXPO_GRADLE_DIR"
-          find $EXPO_GRADLE_DIR -name "*.gradle.kts" | head -5
-          find $EXPO_GRADLE_DIR -name "*.gradle" | head -5
-          find $EXPO_GRADLE_DIR -name "build.gradle*" -exec cat {} \;
-
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint --stacktrace 2>&1 | tail -100
-
-      - name: Find APK
-        run: find android -name "*.apk" 2>/dev/null
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: footflirt-apk
-          path: android/app/build/outputs/apk/**/*.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
