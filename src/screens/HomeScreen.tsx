@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 
 interface Props {
-  onConnect: (wallet: string) => void
+  onConnect: (wallet: string, authToken: string) => void
 }
 
 export default function HomeScreen({ onConnect }: Props) {
