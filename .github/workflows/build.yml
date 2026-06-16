@@ -16,13 +16,38 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Prebuild
+        run: npx expo prebuild --platform android --clean
 
-      - name: Build APK with EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive
+      - name: Fix Gradle and Kotlin versions
+        run: |
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip|' android/gradle/wrapper/gradle-wrapper.properties
+          echo "Gradle wrapper updated"
+          cat android/build.gradle
+          sed -i 's|kotlinVersion = "1.6.10"|kotlinVersion = "1.9.22"|g' android/build.gradle
+          sed -i 's|kotlinVersion = "1.7.0"|kotlinVersion = "1.9.22"|g' android/build.gradle
+          sed -i 's|kotlinVersion = "1.8.0"|kotlinVersion = "1.9.22"|g' android/build.gradle
+          sed -i 's|kotlinVersion = "1.8.10"|kotlinVersion = "1.9.22"|g' android/build.gradle
+          sed -i 's|kotlinVersion = "1.9.0"|kotlinVersion = "1.9.22"|g' android/build.gradle
+          cat android/build.gradle
+
+      - name: Build APK
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: footflirt-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
