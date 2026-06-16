@@ -16,29 +16,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Prebuild
-        run: npx expo prebuild --platform android --clean
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
-      - name: Fix Gradle
-        run: sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.3-all.zip|' android/gradle/wrapper/gradle-wrapper.properties
-
-      - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: footflirt-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+      - name: Build APK with EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive
