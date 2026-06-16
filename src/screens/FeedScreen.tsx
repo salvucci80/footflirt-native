@@ -97,7 +97,9 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.authorize({
+      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+await connection.confirmTransaction(sig)
         cluster: 'mainnet-beta',
         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
       })
