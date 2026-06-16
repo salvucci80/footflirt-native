@@ -28,17 +28,20 @@ async function buyPack(pack: any) {
     {text: 'Cancel', style: 'cancel'},
   ])
 }
-
 async function processPurchase(pack: any) {
   try {
-    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = await import('@solana/web3.js')
+    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    const web3 = await import('@solana/web3.js')
+    const { transact } = mwaModule
+    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
     const amount = parseFloat(pack.price)
+
     await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.authorize({
-        cluster: 'mainnet-beta',
+      const authResult = await walletAdapter.reauthorize({
+        auth_token: authToken,
         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
       })
+
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = new PublicKey(authResult.accounts[0].address)
       const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
@@ -48,17 +51,18 @@ const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = 
       const { blockhash } = await connection.getLatestBlockhash()
       tx.recentBlockhash = blockhash
       tx.feePayer = fromPubkey
-const results = await walletAdapter.signAndSendTransactions({ transactions: [tx] })
-      const sig = results[0]
+      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+      await connection.confirmTransaction(sig)
       await fetch('https://footflirt.app/api/purchase', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet_address: authResult.accounts[0].address, pack_id: pack.id, tx_signature: sig })
       })
       Alert.alert('Pack purchased!', pack.name + ' is now in your collection!')
     })
   } catch(e: any) {
-    Alert.alert('Error', e?.message || 'Purchase failed')
+    Alert.alert('Purchase Error', String(e?.message || e))
   }
 }
 
