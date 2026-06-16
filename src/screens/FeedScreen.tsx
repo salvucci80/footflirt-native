@@ -125,24 +125,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
     Alert.alert('Tip Error', String(e?.message || e))
   }
   }
-      tx.add(SystemProgram.transfer({
-        fromPubkey,
-        toPubkey: new PublicKey(FEE_WALLET),
-        lamports: feeAmount
-      }))
-
-      const { blockhash } = await connection.getLatestBlockhash()
-      tx.recentBlockhash = blockhash
-      tx.feePayer = fromPubkey
-
-      await walletAdapter.signAndSendTransactions({ transactions: [tx] })
-
-      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
-    })
-  } catch(e: any) {
-    Alert.alert('Tip Error', String(e?.message || e))
-  }
-}
 
   if (loading) return (
     <View style={styles.center}>
