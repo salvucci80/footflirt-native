@@ -11,12 +11,13 @@ import ProfileScreen from './ProfileScreen'
 interface Props {
   wallet: string
   username: string
+  authToken: string
   onDisconnect: () => void
 }
 
 export default function MainApp({ wallet, username, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
-  const [showFlirtPass, setShowFlirtPass] = useState(false)
+  {showFlirtPass && <FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} />}
   const [viewProfile, setViewProfile] = useState<string|null>(null)
 
   if (showFlirtPass) {
@@ -42,10 +43,10 @@ export default function MainApp({ wallet, username, onDisconnect }: Props) {
       </View>
 
       <View style={styles.main}>
-        {tab === 'feed' && <FeedScreen wallet={wallet} onViewProfile={setViewProfile} />}
-        {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
-        {tab === 'shop' && <ShopScreen wallet={wallet} />}
-        {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
+        {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} onViewProfile={setViewProfile} />}
+{tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
+{tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
+{tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
       </View>
 
       <View style={styles.nav}>
