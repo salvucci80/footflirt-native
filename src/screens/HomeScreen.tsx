@@ -11,9 +11,8 @@ export default function HomeScreen({ onConnect }: Props) {
  async function connectWallet() {
   setConnecting(true)
   try {
-    const { transact } = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
     const result = await transact(async (wallet: any) => {
-      Alert.alert('Inside transact', 'wallet: ' + typeof wallet)
       const auth = await wallet.authorize({
         cluster: 'mainnet-beta',
         identity: {
@@ -24,10 +23,11 @@ export default function HomeScreen({ onConnect }: Props) {
       })
       return auth
     })
-    Alert.alert('Success', 'Address: ' + result.accounts[0].address)
-    onConnect(result.accounts[0].address)
+    const address = result.accounts[0].address
+    const authToken = result.auth_token
+    onConnect(address, authToken)
   } catch(e: any) {
-    Alert.alert('Error', e?.message || JSON.stringify(e))
+    Alert.alert('Connection Error', e?.message || 'Failed to connect. Please try again.')
   } finally {
     setConnecting(false)
   }
