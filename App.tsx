@@ -12,12 +12,15 @@ export default function App() {
   const [username, setUsername] = useState<string|null>(null)
   const [ageVerified, setAgeVerified] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [authToken, setAuthToken] = useState<string|null>(null)
 
   useEffect(() => {
     (async () => {
       const age = await AsyncStorage.getItem('ff_age_verified')
       const savedWallet = await AsyncStorage.getItem('ff_wallet')
       const savedUsername = await AsyncStorage.getItem('ff_username')
+      const savedToken = await AsyncStorage.getItem('ff_auth_token')
+if (savedToken) setAuthToken(savedToken)
       if (age === 'true') setAgeVerified(true)
       if (savedWallet) setWallet(savedWallet)
       if (savedUsername) setUsername(savedUsername)
@@ -30,16 +33,18 @@ export default function App() {
     setAgeVerified(true)
   }
 
-  async function handleConnect(address: string) {
-    setWallet(address)
-    await AsyncStorage.setItem('ff_wallet', address)
-    const res = await fetch('https://footflirt.app/api/profile?wallet=' + address)
-    const data = await res.json()
-    if (data.username) {
-      setUsername(data.username)
-      await AsyncStorage.setItem('ff_username', data.username)
-    }
+  async function handleConnect(address: string, token: string) {
+  setWallet(address)
+  setAuthToken(token)
+  await AsyncStorage.setItem('ff_wallet', address)
+  await AsyncStorage.setItem('ff_auth_token', token)
+  const res = await fetch('https://footflirt.app/api/profile?wallet=' + address)
+  const data = await res.json()
+  if (data.username) {
+    setUsername(data.username)
+    await AsyncStorage.setItem('ff_username', data.username)
   }
+}
 
   async function handleUsername(name: string) {
     setUsername(name)
@@ -56,12 +61,11 @@ export default function App() {
   if (loading) return null
   if (!ageVerified) return <AgeGate onVerify={handleVerifyAge} />
   if (!wallet) return <HomeScreen onConnect={handleConnect} />
-  if (!username) return <UsernameSetup wallet={wallet} onComplete={handleUsername} />
+if (!username) return <UsernameSetup wallet={wallet} onComplete={handleUsername} />
 
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <MainApp wallet={wallet} username={username} onDisconnect={handleDisconnect} />
-    </SafeAreaProvider>
+<MainApp wallet={wallet} username={username} authToken={authToken!} onDisconnect={handleDisconnect} />    </SafeAreaProvider>
   )
 }
