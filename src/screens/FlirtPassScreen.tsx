@@ -22,14 +22,10 @@ export default function FlirtPassScreen({ wallet, onBack }: Props) {
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
-const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
-await connection.confirmTransaction(sig)
-        cluster: 'mainnet-beta',
+      const authResult = await walletAdapter.reauthorize({
+        auth_token: authToken,
         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
       })
-
-      Alert.alert('Authorized', 'Got wallet: ' + authResult.accounts[0].address.slice(0,8))
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = new PublicKey(authResult.accounts[0].address)
@@ -39,13 +35,13 @@ await connection.confirmTransaction(sig)
       const { blockhash } = await connection.getLatestBlockhash()
       tx.recentBlockhash = blockhash
       tx.feePayer = fromPubkey
-
-      await walletAdapter.signAndSendTransactions({ transactions: [tx] })
-
+      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+      await connection.confirmTransaction(sig)
       await fetch('https://footflirt.app/api/extras?action=flirtpass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: wallet, tx_signature: 'native' })
+        body: JSON.stringify({ wallet_address: wallet, tx_signature: sig })
       })
       setActive(true)
       Alert.alert('FlirtPass activated!')
@@ -55,7 +51,7 @@ await connection.confirmTransaction(sig)
   } finally {
     setBuying(false)
   }
-}
+  }
 
   return (
     <View style={styles.container}>
