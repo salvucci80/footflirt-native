@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIn
 
 interface Props {
   wallet: string
+  authToken: string
   onViewProfile: (username: string) => void
 }
 
@@ -13,7 +14,7 @@ const CATS = ['nail_art','shape_arch','softness','vibe','shoe_pairing']
 const BASE_URL = 'https://footflirt.app/'
 const STARTER_STICKERS = ['startera.png','starterb.png','starterc.png','starterd.png','startere.png','starterf.png']
 
-export default function FeedScreen({ wallet, onViewProfile }: Props) {
+export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [commentPost, setCommentPost] = useState<string|null>(null)
@@ -97,30 +98,33 @@ export default function FeedScreen({ wallet, onViewProfile }: Props) {
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
-const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
-await connection.confirmTransaction(sig)
-        cluster: 'mainnet-beta',
+      const authResult = await walletAdapter.reauthorize({
+        auth_token: authToken,
         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
       })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = new PublicKey(authResult.accounts[0].address)
       const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
-
       const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
       const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
-
       const tx = new Transaction()
-
       if (post.wallet_address) {
-        tx.add(SystemProgram.transfer({
-          fromPubkey,
-          toPubkey: new PublicKey(post.wallet_address),
-          lamports: tipAmount
-        }))
+        tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(post.wallet_address), lamports: tipAmount }))
       }
-
+      tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: feeAmount }))
+      const { blockhash } = await connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.feePayer = fromPubkey
+      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+      await connection.confirmTransaction(sig)
+      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
+    })
+  } catch(e: any) {
+    Alert.alert('Tip Error', String(e?.message || e))
+  }
+  }
       tx.add(SystemProgram.transfer({
         fromPubkey,
         toPubkey: new PublicKey(FEE_WALLET),
