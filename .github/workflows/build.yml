@@ -28,17 +28,20 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Create assets folder
+        run: mkdir -p android/app/src/main/assets
+
+      - name: Bundle JS
+        run: npx react-native bundle --platform android --dev false --entry-file index.ts --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+
       - name: Fix permissions
         run: chmod +x android/gradlew
 
-      - name: Show available tasks
-        run: cd android && ./gradlew tasks --all 2>&1 | grep -i "assemble\|bundle" | head -20
-
       - name: Build APK
-        run: cd android && ./gradlew :app:assembleRelease --no-daemon
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
 
       - name: Find APK
-        run: find android/app/build -name "*.apk" 2>/dev/null
+        run: find android/app/build -name "*.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
