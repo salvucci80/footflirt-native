@@ -46,8 +46,3 @@ jobs:
         with:
           name: footflirt-apk
           path: android/app/build/**/*.apk
-'@
-[System.IO.File]::WriteAllText("C:\Users\capti\Downloads\footflirt-app\footflirt-native\.github\workflows\build.yml", $content)
-git add .
-git commit -m "fix build tasks"
-git push
