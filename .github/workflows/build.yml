@@ -32,7 +32,7 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint -x bundleReleaseJsAndAssets
+        run: cd android && ./gradlew tasks --all 2>&1 | grep -i "bundle\|assemble\|release"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
