@@ -1,3 +1,4 @@
+$content = @'
 name: Build Android APK
 
 on:
@@ -31,10 +32,22 @@ jobs:
       - name: Fix permissions
         run: chmod +x android/gradlew
 
+      - name: Show available tasks
+        run: cd android && ./gradlew tasks --all 2>&1 | grep -i "assemble\|bundle" | head -20
+
       - name: Build APK
-        run: cd android && ./gradlew tasks --all 2>&1 | grep -i "bundle\|assemble\|release"
+        run: cd android && ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Find APK
+        run: find android/app/build -name "*.apk" 2>/dev/null
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: footflirt-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: android/app/build/**/*.apk
+'@
+[System.IO.File]::WriteAllText("C:\Users\capti\Downloads\footflirt-app\footflirt-native\.github\workflows\build.yml", $content)
+git add .
+git commit -m "fix build tasks"
+git push
