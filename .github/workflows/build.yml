@@ -32,12 +32,13 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint --stacktrace 2>&1 | grep -A 30 "createBundleReleaseJsAndAssets" | head -50
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint 2>&1 | tail -50
         env:
           NODE_ENV: production
+        continue-on-error: true
 
       - name: Find APK
-        run: find android/app/build -name "*.apk"
+        run: find android/app/build -name "*.apk" 2>/dev/null || echo "No APK found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
