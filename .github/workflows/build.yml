@@ -35,10 +35,14 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint 2>&1 | tail -50
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
         env:
           NODE_ENV: production
-        continue-on-error: true
+
+      - name: Check bundle in APK
+        run: |
+          cd android/app/build/outputs/apk/release
+          unzip -l app-release.apk | grep -i "bundle\|index.android"
 
       - name: Find APK
         run: find android/app/build -name "*.apk" 2>/dev/null || echo "No APK found"
