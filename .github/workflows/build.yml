@@ -32,11 +32,9 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint
+        run: cd android && ./gradlew assembleRelease --no-daemon -x lint --info 2>&1 | grep -A 20 "createBundle\|BundleHermes\|FAILED\|error" | head -80
         env:
           NODE_ENV: production
-          BUNDLE_COMMAND: bundle
-          ENTRY_FILE: index.ts
 
       - name: Find APK
         run: find android/app/build -name "*.apk"
