@@ -32,7 +32,7 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew assembleRelease --no-daemon -x lint --info 2>&1 | grep -A 20 "createBundle\|BundleHermes\|FAILED\|error" | head -80
+        run: cd android && ./gradlew :app:createBundleReleaseJsAndAssets --no-daemon --info 2>&1 | tail -100
         env:
           NODE_ENV: production
 
