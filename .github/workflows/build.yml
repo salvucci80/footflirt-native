@@ -32,15 +32,12 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: cd android && ./gradlew :app:createBundleReleaseJsAndAssets --no-daemon --info 2>&1 | tail -100
+        run: |
+          cd android
+          ./gradlew :app:createBundleReleaseJsAndAssets --no-daemon 2>&1 | tee /tmp/build.log || true
+          cat /tmp/build.log
         env:
           NODE_ENV: production
 
       - name: Find APK
-        run: find android/app/build -name "*.apk"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: footflirt-apk
-          path: android/app/build/**/*.apk
+        run: find android/app/build -name "*.apk" -o -name "*.bundle" 2>/dev/null
