@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator
 
 interface Props {
   wallet: string
+  authToken: string
   onBack: () => void
 }
 
 const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
 const PRICE_SOL = 0.1
 
-export default function FlirtPassScreen({ wallet, onBack }: Props) {
+export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
   const [buying, setBuying] = useState(false)
   const [active, setActive] = useState(false)
 

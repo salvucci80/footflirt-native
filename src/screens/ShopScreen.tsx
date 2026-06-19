@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } fr
 
 interface Props {
   wallet: string
+  authToken: string
 }
 
 const BASE_URL = 'https://footflirt.app/'
@@ -22,13 +23,7 @@ const PACKS = [
     images:['wilda','wildb','wildc','wildd','wilde','wildf'] },
 ]
 
-async function buyPack(pack: any) {
-  Alert.alert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
-    {text: 'Buy Now', onPress: () => processPurchase(pack)},
-    {text: 'Cancel', style: 'cancel'},
-  ])
-}
-async function processPurchase(pack: any) {
+async function processPurchase(pack: any, authToken: string) {
   try {
     const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
     const web3 = await import('@solana/web3.js')
@@ -66,7 +61,14 @@ async function processPurchase(pack: any) {
   }
 }
 
-export default function ShopScreen({ wallet }: Props) {
+async function buyPack(pack: any, authToken: string) {
+  Alert.alert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
+    {text: 'Buy Now', onPress: () => processPurchase(pack, authToken)},
+    {text: 'Cancel', style: 'cancel'},
+  ])
+}
+
+export default function ShopScreen({ wallet, authToken }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:20}}>
       <Text style={styles.title}>Sticker Shop</Text>
@@ -99,7 +101,7 @@ export default function ShopScreen({ wallet }: Props) {
               {pack.owned ? 'Free' : pack.price + ' SOL'}
             </Text>
             {!pack.owned && (
-              <TouchableOpacity style={styles.buyBtn} onPress={()=>buyPack(pack)}>
+              <TouchableOpacity style={styles.buyBtn} onPress={()=>buyPack(pack, authToken)}>
                 <Text style={styles.buyText}>Buy Pack</Text>
               </TouchableOpacity>
             )}
