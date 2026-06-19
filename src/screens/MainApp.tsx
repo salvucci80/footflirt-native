@@ -15,13 +15,13 @@ interface Props {
   onDisconnect: () => void
 }
 
-export default function MainApp({ wallet, username, onDisconnect }: Props) {
+export default function MainApp({ wallet, username, authToken, onDisconnect }: Props) {
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
-  {showFlirtPass && <FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} />}
+  const [showFlirtPass, setShowFlirtPass] = useState(false)
   const [viewProfile, setViewProfile] = useState<string|null>(null)
 
   if (showFlirtPass) {
-    return <FlirtPassScreen wallet={wallet} onBack={()=>setShowFlirtPass(false)} />
+    return <FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} />
   }
 
   if (viewProfile) {
@@ -32,21 +32,21 @@ export default function MainApp({ wallet, username, onDisconnect }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>FOOTFLIRT</Text>
-<View style={styles.headerRight}>
+        <View style={styles.headerRight}>
           <TouchableOpacity style={styles.profileBtn} onPress={()=>setViewProfile(username)}>
             <Text style={styles.profileBtnText}>{username}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.outBtn} onPress={onDisconnect}>
             <Text style={styles.outText}>Out</Text>
           </TouchableOpacity>
-      </View>
+        </View>
       </View>
 
       <View style={styles.main}>
         {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} onViewProfile={setViewProfile} />}
-{tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
-{tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
-{tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
+        {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
+        {tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
+        {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
       </View>
 
       <View style={styles.nav}>
@@ -68,7 +68,7 @@ export default function MainApp({ wallet, username, onDisconnect }: Props) {
           <Text style={[styles.navLabel, tab==='leaderboard' && styles.navActive]}>Top</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={()=>setShowFlirtPass(true)}>
-          <Ionicons name="diamond" size={24} color={showFlirtPass ? '#FFD700' : '#555'} />
+          <Ionicons name="diamond" size={24} color="#555" />
           <Text style={styles.navLabel}>Pass</Text>
         </TouchableOpacity>
       </View>
@@ -130,12 +130,12 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   profileBtn: {
-  backgroundColor: 'rgba(200,0,255,.15)',
-  borderWidth: 1,
-  borderColor: 'rgba(200,0,255,.3)',
-  borderRadius: 20,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-},
-profileBtnText: { color: '#C800FF', fontSize: 11, fontWeight: '700' },
+    backgroundColor: 'rgba(200,0,255,.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,0,255,.3)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  profileBtnText: { color: '#C800FF', fontSize: 11, fontWeight: '700' },
 })
