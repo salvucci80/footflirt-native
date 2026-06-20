@@ -18,7 +18,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     const perm = await ImagePicker.requestCameraPermissionsAsync()
     if (!perm.granted) { Alert.alert('Camera permission required'); return }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     })
     if (!result.canceled) {
@@ -31,7 +31,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) { Alert.alert('Gallery permission required'); return }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     })
     if (!result.canceled) {
