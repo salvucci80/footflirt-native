@@ -148,7 +148,7 @@ export default function HomeScreen({ onConnect }: Props) {
     <View style={styles.container}>
       <Image source={require('../../assets/icon.png')} style={styles.logo} />
       <Text style={styles.title}>FOOTFLIRT</Text>
-      <Text style={styles.tagline}>RATE. TIP. FLIRT.</Text>
+      <Text style={styles.tagline}>RATE. TIP. FLIRT. v2</Text>
       <Text style={styles.desc}>The boldest creator app on Solana. Post your feet, get rated by AI, earn real crypto.</Text>
 
       <View style={styles.features}>
