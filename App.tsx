@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { supabase } from './src/screens/supabase'
 import AgeGate from './src/screens/AgeGate'
 import HomeScreen from './src/screens/HomeScreen'
 import MainApp from './src/screens/MainApp'
@@ -17,13 +18,25 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const age = await AsyncStorage.getItem('ff_age_verified')
+      if (age === 'true') setAgeVerified(true)
+
       const savedWallet = await AsyncStorage.getItem('ff_wallet')
       const savedUsername = await AsyncStorage.getItem('ff_username')
       const savedToken = await AsyncStorage.getItem('ff_auth_token')
-      if (savedToken) setAuthToken(savedToken)
-      if (age === 'true') setAgeVerified(true)
-      if (savedWallet) setWallet(savedWallet)
-      if (savedUsername) setUsername(savedUsername)
+
+      if (savedWallet?.startsWith('email:')) {
+        const { data } = await supabase.auth.getSession()
+        if (data.session) {
+          setWallet(savedWallet)
+          setAuthToken(data.session.access_token)
+          if (savedUsername) setUsername(savedUsername)
+        }
+      } else if (savedWallet) {
+        setWallet(savedWallet)
+        if (savedToken) setAuthToken(savedToken)
+        if (savedUsername) setUsername(savedUsername)
+      }
+
       setLoading(false)
     })()
   }, [])
@@ -56,6 +69,9 @@ export default function App() {
   }
 
   async function handleDisconnect() {
+    if (wallet?.startsWith('email:')) {
+      await supabase.auth.signOut()
+    }
     setWallet(null)
     setUsername(null)
     setAuthToken(null)

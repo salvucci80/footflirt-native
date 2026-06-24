@@ -1,37 +1,148 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { supabase } from './supabase'
 
 interface Props {
   onConnect: (wallet: string, authToken: string) => void
 }
 
 export default function HomeScreen({ onConnect }: Props) {
+  const [mode, setMode] = useState<'main'|'email-login'|'email-signup'>('main')
   const [connecting, setConnecting] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
- async function connectWallet() {
-  setConnecting(true)
-  try {
-    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const result = await transact(async (wallet: any) => {
-      const auth = await wallet.authorize({
-        cluster: 'mainnet-beta',
-        identity: {
-          name: 'FootFlirt',
-          uri: 'https://footflirt.app',
-          icon: '/icon.png'
-        }
+  async function connectWallet() {
+    setConnecting(true)
+    try {
+      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+      const result = await transact(async (wallet: any) => {
+        const auth = await wallet.authorize({
+          cluster: 'mainnet-beta',
+          identity: {
+            name: 'FootFlirt',
+            uri: 'https://footflirt.app',
+            icon: '/icon.png'
+          }
+        })
+        return auth
       })
-      return auth
-    })
-    const address = result.accounts[0].address
-    const authToken = result.auth_token
-    onConnect(address, authToken)
-  } catch(e: any) {
-    Alert.alert('Connection Error', e?.message || 'Failed to connect. Please try again.')
-  } finally {
-    setConnecting(false)
+      const address = result.accounts[0].address
+      const authToken = result.auth_token
+      onConnect(address, authToken)
+    } catch (e: any) {
+      Alert.alert('Connection Error', e?.message || 'Failed to connect wallet. Make sure you have a Solana wallet app installed (Phantom, Solflare, etc).')
+    } finally {
+      setConnecting(false)
+    }
   }
-}
+
+  async function handleEmailLogin() {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Please enter your email and password.')
+      return
+    }
+    setConnecting(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (error) {
+        Alert.alert('Login Failed', error.message)
+        return
+      }
+      const userId = data.user?.id || data.session?.user?.id
+      if (userId) {
+        onConnect('email:' + userId, data.session?.access_token || '')
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Login failed')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  async function handleEmailSignup() {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Please enter your email and password.')
+      return
+    }
+    if (password.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.')
+      return
+    }
+    setConnecting(true)
+    try {
+      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      if (error) {
+        Alert.alert('Signup Failed', error.message)
+        return
+      }
+      if (data.session) {
+        const userId = data.user?.id
+        onConnect('email:' + userId, data.session.access_token || '')
+      } else {
+        Alert.alert('Check your email', 'We sent a confirmation link to ' + email.trim() + '. Please confirm and then log in.')
+        setMode('email-login')
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Signup failed')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  if (mode === 'email-login' || mode === 'email-signup') {
+    const isSignup = mode === 'email-signup'
+    return (
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <Text style={styles.title}>FOOTFLIRT</Text>
+          <Text style={styles.tagline}>{isSignup ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#998aaa"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#998aaa"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={styles.connectBtn}
+            onPress={isSignup ? handleEmailSignup : handleEmailLogin}
+            disabled={connecting}
+          >
+            {connecting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.connectText}>{isSignup ? 'Create Account' : 'Sign In'}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setMode(isSignup ? 'email-login' : 'email-signup')}>
+            <Text style={styles.switchText}>
+              {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setMode('main')} style={{ marginTop: 16 }}>
+            <Text style={styles.switchText}>Back</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -42,9 +153,9 @@ export default function HomeScreen({ onConnect }: Props) {
 
       <View style={styles.features}>
         {[
-          {icon:'⚖️', title:'AI Judge', desc:'Scores across 5 categories'},
-          {icon:'💰', title:'Earn SOL', desc:'Tips in SOL, SKR & USDC'},
-          {icon:'🎯', title:'Stickers', desc:'Drop stickers on posts'},
+          { icon: '⚖️', title: 'AI Judge', desc: 'Scores across 5 categories' },
+          { icon: '💰', title: 'Earn SOL', desc: 'Tips in SOL, SKR & USDC' },
+          { icon: '🎯', title: 'Stickers', desc: 'Drop stickers on posts' },
         ].map(f => (
           <View key={f.title} style={styles.featureCard}>
             <Text style={styles.featureIcon}>{f.icon}</Text>
@@ -54,17 +165,21 @@ export default function HomeScreen({ onConnect }: Props) {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.connectBtn} onPress={connectWallet} disabled={connecting}>
+      <TouchableOpacity style={styles.connectBtn} onPress={() => setMode('email-login')}>
+        <Text style={styles.connectText}>Sign In with Email</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.walletBtn} onPress={connectWallet} disabled={connecting}>
         {connecting ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color="#FF2D78" />
         ) : (
-          <Text style={styles.connectText}>Connect Wallet</Text>
+          <Text style={styles.walletText}>Connect Solana Wallet</Text>
         )}
       </TouchableOpacity>
-      <TouchableOpacity onPress={()=>require('react-native').Linking.openURL('https://solflare.com')} style={{marginTop:8,marginBottom:8}}>
-  <Text style={{color:'#998aaa',fontSize:12,textAlign:'center'}}>Don't have a wallet? Get Solflare</Text>
-</TouchableOpacity>
 
+      <TouchableOpacity onPress={() => require('react-native').Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
+        <Text style={{ color: '#998aaa', fontSize: 12, textAlign: 'center' }}>Don't have a wallet? Get Solflare</Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -73,6 +188,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#080010',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -128,10 +249,40 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    marginBottom: 12,
   },
   connectText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  walletBtn: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,45,120,.4)',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  walletText: {
+    color: '#FF2D78',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#120020',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,.15)',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  switchText: {
+    color: '#998aaa',
+    fontSize: 13,
+    marginTop: 8,
   },
 })
