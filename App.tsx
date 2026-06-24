@@ -16,6 +16,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string|null>(null)
 
   useEffect(() => {
+    
     (async () => {
       const age = await AsyncStorage.getItem('ff_age_verified')
       if (age === 'true') setAgeVerified(true)
