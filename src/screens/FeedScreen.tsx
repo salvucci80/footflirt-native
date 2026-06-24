@@ -138,10 +138,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
         const bd = post.score_breakdown || {}
         const myVote = votes[post.id] ?? 0
 
-        function tipUser(post: any): void {
-          throw new Error('Function not implemented.')
-        }
-
         return (
           <View key={post.id} style={styles.card}>
             <View style={styles.imageContainer}>
