@@ -23,10 +23,10 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.reauthorize({
-        auth_token: authToken,
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-      })
+    const authResult = await walletAdapter.authorize({
+  cluster: 'mainnet-beta',
+  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+})
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = new PublicKey(authResult.accounts[0].address)
