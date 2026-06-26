@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useCustomAlert } from './CustomAlert'
 import FeedScreen from './FeedScreen'
 import SubmitScreen from './SubmitScreen'
 import ShopScreen from './ShopScreen'
@@ -19,17 +20,19 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
   const [showFlirtPass, setShowFlirtPass] = useState(false)
   const [viewProfile, setViewProfile] = useState<string|null>(null)
+  const alertModal = useCustomAlert()
 
   if (showFlirtPass) {
-    return <FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} />
+    return <>{alertModal}<FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} /></>
   }
 
   if (viewProfile) {
-    return <ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} />
+    return <>{alertModal}<ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} /></>
   }
 
   return (
     <View style={styles.container}>
+      {alertModal}
       <View style={styles.header}>
         <Text style={styles.logo}>FOOTFLIRT</Text>
         <View style={styles.headerRight}>
@@ -43,7 +46,7 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
       </View>
 
       <View style={styles.main}>
-        {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} onViewProfile={setViewProfile} />}
+        {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} username={username} onViewProfile={setViewProfile} />}
         {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
         {tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
         {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
