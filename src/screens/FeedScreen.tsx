@@ -43,7 +43,7 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
     await fetch(`https://footflirt.app/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username content: commentText})
+      body: JSON.stringify({username: wallet, content: commentText})
     })
     setCommentText('')
     loadComments(postId)
