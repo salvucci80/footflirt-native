@@ -1,0 +1,863 @@
+diff --git a/App.tsx b/App.tsx
+index 337bca6..b917780 100644
+--- a/App.tsx
++++ b/App.tsx
+@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
+ import { StatusBar } from 'expo-status-bar'
+ import { SafeAreaProvider } from 'react-native-safe-area-context'
+ import AsyncStorage from '@react-native-async-storage/async-storage'
++import { supabase } from './src/supabase'
+ import AgeGate from './src/screens/AgeGate'
+ import HomeScreen from './src/screens/HomeScreen'
+ import MainApp from './src/screens/MainApp'
+@@ -17,13 +18,25 @@ export default function App() {
+   useEffect(() => {
+     (async () => {
+       const age = await AsyncStorage.getItem('ff_age_verified')
++      if (age === 'true') setAgeVerified(true)
++
+       const savedWallet = await AsyncStorage.getItem('ff_wallet')
+       const savedUsername = await AsyncStorage.getItem('ff_username')
+       const savedToken = await AsyncStorage.getItem('ff_auth_token')
+-      if (savedToken) setAuthToken(savedToken)
+-      if (age === 'true') setAgeVerified(true)
+-      if (savedWallet) setWallet(savedWallet)
+-      if (savedUsername) setUsername(savedUsername)
++
++      if (savedWallet?.startsWith('email:')) {
++        const { data } = await supabase.auth.getSession()
++        if (data.session) {
++          setWallet(savedWallet)
++          setAuthToken(data.session.access_token)
++          if (savedUsername) setUsername(savedUsername)
++        }
++      } else if (savedWallet) {
++        setWallet(savedWallet)
++        if (savedToken) setAuthToken(savedToken)
++        if (savedUsername) setUsername(savedUsername)
++      }
++
+       setLoading(false)
+     })()
+   }, [])
+@@ -56,6 +69,9 @@ export default function App() {
+   }
+ 
+   async function handleDisconnect() {
++    if (wallet?.startsWith('email:')) {
++      await supabase.auth.signOut()
++    }
+     setWallet(null)
+     setUsername(null)
+     setAuthToken(null)
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 4dc50fd..cc65c73 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -13,7 +13,7 @@
+       <data android:scheme="https"/>
+     </intent>
+   </queries>
+-  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
++  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
+     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
+     <meta-data android:name="expo.modules.updates.ENABLE_BSDIFF_PATCH_SUPPORT" android:value="true"/>
+     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
+diff --git a/src/screens/CustomAlert.tsx b/src/screens/CustomAlert.tsx
+new file mode 100644
+index 0000000..c88f30b
+--- /dev/null
++++ b/src/screens/CustomAlert.tsx
+@@ -0,0 +1,134 @@
++import React from 'react'
++import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
++
++interface AlertButton {
++  text: string
++  onPress?: () => void
++  style?: 'default' | 'cancel' | 'destructive'
++}
++
++interface AlertState {
++  visible: boolean
++  title: string
++  message?: string
++  buttons: AlertButton[]
++}
++
++const initial: AlertState = { visible: false, title: '', buttons: [] }
++
++let _setAlert: (s: AlertState) => void = () => {}
++
++export function useCustomAlert() {
++  const [alert, setAlert] = React.useState<AlertState>(initial)
++  _setAlert = setAlert
++
++  const dismiss = () => setAlert(initial)
++
++  const component = (
++    <Modal transparent visible={alert.visible} animationType="fade" onRequestClose={dismiss}>
++      <View style={styles.overlay}>
++        <View style={styles.box}>
++          <Text style={styles.title}>{alert.title}</Text>
++          {alert.message ? <Text style={styles.message}>{alert.message}</Text> : null}
++          <View style={styles.btnRow}>
++            {alert.buttons.map((btn, i) => (
++              <TouchableOpacity
++                key={i}
++                style={[
++                  styles.btn,
++                  btn.style === 'cancel' && styles.cancelBtn,
++                  btn.style === 'destructive' && styles.destructiveBtn,
++                  !btn.style || btn.style === 'default' ? styles.defaultBtn : null,
++                ]}
++                onPress={() => { dismiss(); btn.onPress?.() }}
++              >
++                <Text style={[
++                  styles.btnText,
++                  btn.style === 'cancel' && styles.cancelText,
++                  btn.style === 'destructive' && styles.destructiveText,
++                ]}>
++                  {btn.text}
++                </Text>
++              </TouchableOpacity>
++            ))}
++          </View>
++        </View>
++      </View>
++    </Modal>
++  )
++
++  return component
++}
++
++export function showAlert(title: string, message?: string, buttons?: AlertButton[]) {
++  _setAlert({
++    visible: true,
++    title,
++    message,
++    buttons: buttons || [{ text: 'OK' }],
++  })
++}
++
++const styles = StyleSheet.create({
++  overlay: {
++    flex: 1,
++    backgroundColor: 'rgba(0,0,0,.75)',
++    justifyContent: 'center',
++    alignItems: 'center',
++    padding: 32,
++  },
++  box: {
++    width: '100%',
++    backgroundColor: '#1C0030',
++    borderRadius: 20,
++    padding: 24,
++    borderWidth: 1,
++    borderColor: 'rgba(255,45,120,.3)',
++  },
++  title: {
++    fontSize: 18,
++    fontWeight: '800',
++    color: '#fff',
++    textAlign: 'center',
++    marginBottom: 8,
++  },
++  message: {
++    fontSize: 14,
++    color: '#998aaa',
++    textAlign: 'center',
++    lineHeight: 20,
++    marginBottom: 20,
++  },
++  btnRow: {
++    gap: 8,
++  },
++  btn: {
++    borderRadius: 12,
++    padding: 14,
++    alignItems: 'center',
++  },
++  defaultBtn: {
++    backgroundColor: '#FF2D78',
++  },
++  cancelBtn: {
++    backgroundColor: 'rgba(255,255,255,.08)',
++    borderWidth: 1,
++    borderColor: 'rgba(255,255,255,.15)',
++  },
++  destructiveBtn: {
++    backgroundColor: 'rgba(255,60,60,.2)',
++    borderWidth: 1,
++    borderColor: 'rgba(255,60,60,.4)',
++  },
++  btnText: {
++    fontSize: 15,
++    fontWeight: '700',
++    color: '#fff',
++  },
++  cancelText: {
++    color: '#998aaa',
++  },
++  destructiveText: {
++    color: '#ff3c3c',
++  },
++})
+diff --git a/src/screens/FeedScreen.tsx b/src/screens/FeedScreen.tsx
+index b4bb35a..f3e428a 100644
+--- a/src/screens/FeedScreen.tsx
++++ b/src/screens/FeedScreen.tsx
+@@ -1,9 +1,11 @@
+ ﻿import React, { useEffect, useState } from 'react'
+-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share } from 'react-native'
++import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share } from 'react-native'
++import { showAlert } from './CustomAlert'
+ 
+ interface Props {
+   wallet: string
+   authToken: string
++  username: string
+   onViewProfile: (username: string) => void
+ }
+ 
+@@ -14,12 +16,11 @@ const CATS = ['nail_art','shape_arch','softness','vibe','shoe_pairing']
+ const BASE_URL = 'https://footflirt.app/'
+ const STARTER_STICKERS = ['startera.png','starterb.png','starterc.png','starterd.png','startere.png','starterf.png']
+ 
+-export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) {
++export default function FeedScreen({ wallet, authToken, username, onViewProfile }: Props) {
+   const [posts, setPosts] = useState<any[]>([])
+   const [loading, setLoading] = useState(true)
+   const [commentPost, setCommentPost] = useState<string|null>(null)
+   const [commentText, setCommentText] = useState('')
+-  const [commentName, setCommentName] = useState('')
+   const [comments, setComments] = useState<Record<string,any[]>>({})
+   const [stickerPost, setStickerPost] = useState<string|null>(null)
+   const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
+@@ -40,18 +41,18 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+   }
+ 
+   async function submitComment(postId: string) {
+-    if (!commentText.trim() || !commentName.trim()) return
++    if (!commentText.trim()) return
+     await fetch(`https://footflirt.app/api/posts/${postId}/comments`, {
+       method: 'POST',
+       headers: {'Content-Type':'application/json'},
+-      body: JSON.stringify({username: commentName, content: commentText})
++      body: JSON.stringify({username, content: commentText})
+     })
+     setCommentText('')
+     loadComments(postId)
+   }
+ 
+   async function reportPost(postId: string) {
+-    Alert.alert('Report Post', 'Why are you reporting this?', [
++    showAlert('Report Post', 'Why are you reporting this?', [
+       {text: 'Nudity', onPress: () => sendReport(postId, 'Nudity')},
+       {text: 'Spam', onPress: () => sendReport(postId, 'Spam')},
+       {text: 'Inappropriate', onPress: () => sendReport(postId, 'Inappropriate')},
+@@ -66,9 +67,9 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+         headers: {'Content-Type':'application/json'},
+         body: JSON.stringify({post_id: postId, reason})
+       })
+-      Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
++      showAlert('Reported', 'Thank you for your report.', [{text: 'OK'}])
+     } catch(e) {
+-      Alert.alert('Error', 'Failed to report.')
++      showAlert('Error', 'Failed to report.')
+     }
+   }
+ 
+@@ -82,7 +83,7 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+   }
+ 
+   async function tipUser(post: any) {
+-    Alert.alert('Tip', 'How much SOL would you like to tip?', [
++    showAlert('Tip', 'How much SOL would you like to tip?', [
+       {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
+       {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
+       {text: '0.1 SOL', onPress: () => sendTip(post, 0.1)},
+@@ -98,8 +99,8 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
+ 
+     await transact(async (walletAdapter: any) => {
+-      const authResult = await walletAdapter.reauthorize({
+-        auth_token: authToken,
++      const authResult = await walletAdapter.authorize({
++        cluster: 'mainnet-beta',
+         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+       })
+ 
+@@ -119,10 +120,10 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+       const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+       const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+       await connection.confirmTransaction(sig)
+-      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
++      showAlert('Tip sent!', `${amount} SOL sent successfully!`)
+     })
+   } catch(e: any) {
+-    Alert.alert('Tip Error', String(e?.message || e))
++    showAlert('Tip Error', String(e?.message || e))
+   }
+   }
+ 
+@@ -138,10 +139,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+         const bd = post.score_breakdown || {}
+         const myVote = votes[post.id] ?? 0
+ 
+-        function tipUser(post: any): void {
+-          throw new Error('Function not implemented.')
+-        }
+-
+         return (
+           <View key={post.id} style={styles.card}>
+             <View style={styles.imageContainer}>
+@@ -248,13 +245,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props)
+                       <Text style={styles.commentContent}>{c.content}</Text>
+                     </View>
+                   ))}
+-                  <TextInput
+-                    style={styles.commentInput}
+-                    placeholder="Your name..."
+-                    placeholderTextColor="#998aaa"
+-                    value={commentName}
+-                    onChangeText={setCommentName}
+-                  />
+                   <TextInput
+                     style={styles.commentInput}
+                     placeholder="Add a comment..."
+diff --git a/src/screens/FlirtPassScreen.tsx b/src/screens/FlirtPassScreen.tsx
+index 80668c6..f62e75c 100644
+--- a/src/screens/FlirtPassScreen.tsx
++++ b/src/screens/FlirtPassScreen.tsx
+@@ -1,5 +1,6 @@
+ ﻿import React, { useState } from 'react'
+-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
++import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
++import { showAlert } from './CustomAlert'
+ 
+ interface Props {
+   wallet: string
+@@ -23,8 +24,8 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
+     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
+ 
+     await transact(async (walletAdapter: any) => {
+-      const authResult = await walletAdapter.reauthorize({
+-        auth_token: authToken,
++      const authResult = await walletAdapter.authorize({
++        cluster: 'mainnet-beta',
+         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+       })
+ 
+@@ -45,10 +46,10 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
+         body: JSON.stringify({ wallet_address: wallet, tx_signature: sig })
+       })
+       setActive(true)
+-      Alert.alert('FlirtPass activated!')
++      showAlert('FlirtPass activated!')
+     })
+   } catch(e: any) {
+-    Alert.alert('Subscribe Error', String(e?.message || e))
++    showAlert('Subscribe Error', String(e?.message || e))
+   } finally {
+     setBuying(false)
+   }
+diff --git a/src/screens/HomeScreen.tsx b/src/screens/HomeScreen.tsx
+index 313f8fc..a3b6ed7 100644
+--- a/src/screens/HomeScreen.tsx
++++ b/src/screens/HomeScreen.tsx
+@@ -1,40 +1,159 @@
+ import React, { useState } from 'react'
+-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native'
++import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
++import { useCustomAlert, showAlert } from './CustomAlert'
++import { supabase } from '../supabase'
+ 
+ interface Props {
+   onConnect: (wallet: string, authToken: string) => void
+ }
+ 
+ export default function HomeScreen({ onConnect }: Props) {
++  const alertModal = useCustomAlert()
++  const [mode, setMode] = useState<'main'|'email-login'|'email-signup'>('main')
+   const [connecting, setConnecting] = useState(false)
++  const [email, setEmail] = useState('')
++  const [password, setPassword] = useState('')
+ 
+- async function connectWallet() {
+-  setConnecting(true)
+-  try {
+-    const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+-    const result = await transact(async (wallet: any) => {
+-      const auth = await wallet.authorize({
+-        cluster: 'mainnet-beta',
+-        identity: {
+-          name: 'FootFlirt',
+-          uri: 'https://footflirt.app',
+-          icon: '/icon.png'
+-        }
++  async function connectWallet() {
++    setConnecting(true)
++    try {
++      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
++      const { PublicKey } = await import('@solana/web3.js')
++      const result = await transact(async (wallet: any) => {
++        const auth = await wallet.authorize({
++          cluster: 'mainnet-beta',
++          identity: {
++            name: 'FootFlirt',
++            uri: 'https://footflirt.app',
++            icon: '/icon.png'
++          }
++        })
++        return auth
+       })
+-      return auth
+-    })
+-    const address = result.accounts[0].address
+-    const authToken = result.auth_token
+-    onConnect(address, authToken)
+-  } catch(e: any) {
+-    Alert.alert('Connection Error', e?.message || 'Failed to connect. Please try again.')
+-  } finally {
+-    setConnecting(false)
++      const account = result.accounts[0]
++      const address = account.address instanceof Uint8Array
++        ? new PublicKey(account.address).toBase58()
++        : String(account.address)
++      const authToken = result.auth_token || result.authToken || ''
++      onConnect(address, authToken)
++    } catch (e: any) {
++      showAlert('Connection Error', e?.message || 'Failed to connect wallet. Make sure you have a Solana wallet app installed (Phantom, Solflare, etc).')
++    } finally {
++      setConnecting(false)
++    }
++  }
++
++  async function handleEmailLogin() {
++    if (!email.trim() || !password.trim()) {
++      showAlert('Missing fields', 'Please enter your email and password.')
++      return
++    }
++    setConnecting(true)
++    try {
++      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
++      if (error) {
++        showAlert('Login Failed', error.message)
++        return
++      }
++      const userId = data.user?.id || data.session?.user?.id
++      if (userId) {
++        onConnect('email:' + userId, data.session?.access_token || '')
++      }
++    } catch (e: any) {
++      showAlert('Error', e?.message || 'Login failed')
++    } finally {
++      setConnecting(false)
++    }
++  }
++
++  async function handleEmailSignup() {
++    if (!email.trim() || !password.trim()) {
++      showAlert('Missing fields', 'Please enter your email and password.')
++      return
++    }
++    if (password.length < 6) {
++      showAlert('Weak password', 'Password must be at least 6 characters.')
++      return
++    }
++    setConnecting(true)
++    try {
++      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
++      if (error) {
++        showAlert('Signup Failed', error.message)
++        return
++      }
++      if (data.session) {
++        const userId = data.user?.id
++        onConnect('email:' + userId, data.session.access_token || '')
++      } else {
++        showAlert('Check your email', 'We sent a confirmation link to ' + email.trim() + '. Please confirm and then log in.')
++        setMode('email-login')
++      }
++    } catch (e: any) {
++      showAlert('Error', e?.message || 'Signup failed')
++    } finally {
++      setConnecting(false)
++    }
++  }
++
++  if (mode === 'email-login' || mode === 'email-signup') {
++    const isSignup = mode === 'email-signup'
++    return (
++      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
++        {alertModal}
++        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
++          <Image source={require('../../assets/icon.png')} style={styles.logo} />
++          <Text style={styles.title}>FOOTFLIRT</Text>
++          <Text style={styles.tagline}>{isSignup ? 'CREATE ACCOUNT' : 'SIGN IN'}</Text>
++
++          <TextInput
++            style={styles.input}
++            placeholder="Email"
++            placeholderTextColor="#998aaa"
++            value={email}
++            onChangeText={setEmail}
++            keyboardType="email-address"
++            autoCapitalize="none"
++            autoComplete="email"
++          />
++          <TextInput
++            style={styles.input}
++            placeholder="Password"
++            placeholderTextColor="#998aaa"
++            value={password}
++            onChangeText={setPassword}
++            secureTextEntry
++          />
++
++          <TouchableOpacity
++            style={styles.connectBtn}
++            onPress={isSignup ? handleEmailSignup : handleEmailLogin}
++            disabled={connecting}
++          >
++            {connecting ? (
++              <ActivityIndicator color="#fff" />
++            ) : (
++              <Text style={styles.connectText}>{isSignup ? 'Create Account' : 'Sign In'}</Text>
++            )}
++          </TouchableOpacity>
++
++          <TouchableOpacity onPress={() => setMode(isSignup ? 'email-login' : 'email-signup')}>
++            <Text style={styles.switchText}>
++              {isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
++            </Text>
++          </TouchableOpacity>
++
++          <TouchableOpacity onPress={() => setMode('main')} style={{ marginTop: 16 }}>
++            <Text style={styles.switchText}>Back</Text>
++          </TouchableOpacity>
++        </ScrollView>
++      </KeyboardAvoidingView>
++    )
+   }
+-}
+ 
+   return (
+     <View style={styles.container}>
++      {alertModal}
+       <Image source={require('../../assets/icon.png')} style={styles.logo} />
+       <Text style={styles.title}>FOOTFLIRT</Text>
+       <Text style={styles.tagline}>RATE. TIP. FLIRT.</Text>
+@@ -42,9 +161,9 @@ export default function HomeScreen({ onConnect }: Props) {
+ 
+       <View style={styles.features}>
+         {[
+-          {icon:'⚖️', title:'AI Judge', desc:'Scores across 5 categories'},
+-          {icon:'💰', title:'Earn SOL', desc:'Tips in SOL, SKR & USDC'},
+-          {icon:'🎯', title:'Stickers', desc:'Drop stickers on posts'},
++          { icon: '⚖️', title: 'AI Judge', desc: 'Scores across 5 categories' },
++          { icon: '💰', title: 'Earn SOL', desc: 'Tips in SOL, SKR & USDC' },
++          { icon: '🎯', title: 'Stickers', desc: 'Drop stickers on posts' },
+         ].map(f => (
+           <View key={f.title} style={styles.featureCard}>
+             <Text style={styles.featureIcon}>{f.icon}</Text>
+@@ -54,17 +173,21 @@ export default function HomeScreen({ onConnect }: Props) {
+         ))}
+       </View>
+ 
+-      <TouchableOpacity style={styles.connectBtn} onPress={connectWallet} disabled={connecting}>
++      <TouchableOpacity style={styles.connectBtn} onPress={() => setMode('email-login')}>
++        <Text style={styles.connectText}>Sign In with Email</Text>
++      </TouchableOpacity>
++
++      <TouchableOpacity style={styles.walletBtn} onPress={connectWallet} disabled={connecting}>
+         {connecting ? (
+-          <ActivityIndicator color="#fff" />
++          <ActivityIndicator color="#FF2D78" />
+         ) : (
+-          <Text style={styles.connectText}>Connect Wallet</Text>
++          <Text style={styles.walletText}>Connect Solana Wallet</Text>
+         )}
+       </TouchableOpacity>
+-      <TouchableOpacity onPress={()=>require('react-native').Linking.openURL('https://solflare.com')} style={{marginTop:8,marginBottom:8}}>
+-  <Text style={{color:'#998aaa',fontSize:12,textAlign:'center'}}>Don't have a wallet? Get Solflare</Text>
+-</TouchableOpacity>
+ 
++      <TouchableOpacity onPress={() => require('react-native').Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
++        <Text style={{ color: '#998aaa', fontSize: 12, textAlign: 'center' }}>Don't have a wallet? Get Solflare</Text>
++      </TouchableOpacity>
+     </View>
+   )
+ }
+@@ -77,6 +200,12 @@ const styles = StyleSheet.create({
+     justifyContent: 'center',
+     padding: 24,
+   },
++  scrollContent: {
++    flexGrow: 1,
++    alignItems: 'center',
++    justifyContent: 'center',
++    padding: 24,
++  },
+   logo: {
+     width: 80,
+     height: 80,
+@@ -128,10 +257,40 @@ const styles = StyleSheet.create({
+     borderRadius: 16,
+     padding: 16,
+     alignItems: 'center',
++    marginBottom: 12,
+   },
+   connectText: {
+     color: '#fff',
+     fontSize: 16,
+     fontWeight: '700',
+   },
++  walletBtn: {
++    width: '100%',
++    borderWidth: 1,
++    borderColor: 'rgba(255,45,120,.4)',
++    borderRadius: 16,
++    padding: 16,
++    alignItems: 'center',
++  },
++  walletText: {
++    color: '#FF2D78',
++    fontSize: 16,
++    fontWeight: '700',
++  },
++  input: {
++    width: '100%',
++    backgroundColor: '#120020',
++    borderWidth: 1,
++    borderColor: 'rgba(255,255,255,.15)',
++    borderRadius: 12,
++    padding: 14,
++    color: '#fff',
++    fontSize: 16,
++    marginBottom: 12,
++  },
++  switchText: {
++    color: '#998aaa',
++    fontSize: 13,
++    marginTop: 8,
++  },
+ })
+diff --git a/src/screens/MainApp.tsx b/src/screens/MainApp.tsx
+index c0370e7..d1fbd7a 100644
+--- a/src/screens/MainApp.tsx
++++ b/src/screens/MainApp.tsx
+@@ -1,6 +1,7 @@
+ import React, { useState } from 'react'
+ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
+ import { Ionicons } from '@expo/vector-icons'
++import { useCustomAlert } from './CustomAlert'
+ import FeedScreen from './FeedScreen'
+ import SubmitScreen from './SubmitScreen'
+ import ShopScreen from './ShopScreen'
+@@ -19,17 +20,19 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
+   const [tab, setTab] = useState<'feed'|'submit'|'shop'|'leaderboard'>('feed')
+   const [showFlirtPass, setShowFlirtPass] = useState(false)
+   const [viewProfile, setViewProfile] = useState<string|null>(null)
++  const alertModal = useCustomAlert()
+ 
+   if (showFlirtPass) {
+-    return <FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} />
++    return <>{alertModal}<FlirtPassScreen wallet={wallet} authToken={authToken} onBack={()=>setShowFlirtPass(false)} /></>
+   }
+ 
+   if (viewProfile) {
+-    return <ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} />
++    return <>{alertModal}<ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} /></>
+   }
+ 
+   return (
+     <View style={styles.container}>
++      {alertModal}
+       <View style={styles.header}>
+         <Text style={styles.logo}>FOOTFLIRT</Text>
+         <View style={styles.headerRight}>
+@@ -43,7 +46,7 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
+       </View>
+ 
+       <View style={styles.main}>
+-        {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} onViewProfile={setViewProfile} />}
++        {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} username={username} onViewProfile={setViewProfile} />}
+         {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
+         {tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
+         {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
+diff --git a/src/screens/ProfileScreen.tsx b/src/screens/ProfileScreen.tsx
+index 45f80d4..627f632 100644
+--- a/src/screens/ProfileScreen.tsx
++++ b/src/screens/ProfileScreen.tsx
+@@ -1,5 +1,6 @@
+ import React, { useEffect, useState } from 'react'
+-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Share, Alert } from 'react-native'
++import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Share } from 'react-native'
++import { showAlert } from './CustomAlert'
+ import { Ionicons } from '@expo/vector-icons'
+ import * as ImagePicker from 'expo-image-picker'
+ 
+@@ -59,7 +60,7 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
+   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+   if (!perm.granted) return
+   const result = await ImagePicker.launchImageLibraryAsync({
+-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
++    mediaTypes: ['images'],
+     allowsEditing: true,
+     aspect: [1, 1],
+     quality: 0.8,
+@@ -87,7 +88,7 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
+     })
+     setAvatarUrl(url)
+   } catch(e) {
+-    Alert.alert('Failed to upload photo')
++    showAlert('Failed to upload photo')
+   }
+ }
+ 
+diff --git a/src/screens/ShopScreen.tsx b/src/screens/ShopScreen.tsx
+index 8162428..ecfc0c5 100644
+--- a/src/screens/ShopScreen.tsx
++++ b/src/screens/ShopScreen.tsx
+@@ -1,5 +1,6 @@
+ ﻿import React from 'react'
+-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native'
++import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native'
++import { showAlert } from './CustomAlert'
+ 
+ interface Props {
+   wallet: string
+@@ -32,8 +33,8 @@ async function processPurchase(pack: any, authToken: string) {
+     const amount = parseFloat(pack.price)
+ 
+     await transact(async (walletAdapter: any) => {
+-      const authResult = await walletAdapter.reauthorize({
+-        auth_token: authToken,
++      const authResult = await walletAdapter.authorize({
++        cluster: 'mainnet-beta',
+         identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+       })
+ 
+@@ -54,15 +55,15 @@ async function processPurchase(pack: any, authToken: string) {
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ wallet_address: authResult.accounts[0].address, pack_id: pack.id, tx_signature: sig })
+       })
+-      Alert.alert('Pack purchased!', pack.name + ' is now in your collection!')
++      showAlert('Pack purchased!', pack.name + ' is now in your collection!')
+     })
+   } catch(e: any) {
+-    Alert.alert('Purchase Error', String(e?.message || e))
++    showAlert('Purchase Error', String(e?.message || e))
+   }
+ }
+ 
+ async function buyPack(pack: any, authToken: string) {
+-  Alert.alert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
++  showAlert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
+     {text: 'Buy Now', onPress: () => processPurchase(pack, authToken)},
+     {text: 'Cancel', style: 'cancel'},
+   ])
+diff --git a/src/screens/SubmitScreen.tsx b/src/screens/SubmitScreen.tsx
+index c2f5ad0..e48e9b4 100644
+--- a/src/screens/SubmitScreen.tsx
++++ b/src/screens/SubmitScreen.tsx
+@@ -1,5 +1,6 @@
+ import React, { useState } from 'react'
+-import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native'
++import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator } from 'react-native'
++import { showAlert } from './CustomAlert'
+ import * as ImagePicker from 'expo-image-picker'
+ 
+ interface Props {
+@@ -16,9 +17,9 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
+ 
+   async function takePhoto() {
+     const perm = await ImagePicker.requestCameraPermissionsAsync()
+-    if (!perm.granted) { Alert.alert('Camera permission required'); return }
++    if (!perm.granted) { showAlert('Camera permission required'); return }
+     const result = await ImagePicker.launchCameraAsync({
+-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
++      mediaTypes: ['images'],
+       quality: 0.8,
+     })
+     if (!result.canceled) {
+@@ -29,9 +30,9 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
+ 
+   async function choosePhoto() {
+     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+-    if (!perm.granted) { Alert.alert('Gallery permission required'); return }
++    if (!perm.granted) { showAlert('Gallery permission required'); return }
+     const result = await ImagePicker.launchImageLibraryAsync({
+-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
++      mediaTypes: ['images'],
+       quality: 0.8,
+     })
+     if (!result.canceled) {
+@@ -88,7 +89,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
+     })
+     onPost()
+   } catch(e: any) {
+-    Alert.alert('Post failed', e?.message || 'Please try again')
++    showAlert('Post failed', e?.message || 'Please try again')
+     setPhase('result')
+   }
+ }
+diff --git a/src/screens/UsernameSetup.tsx b/src/screens/UsernameSetup.tsx
+index 852c766..b3df131 100644
+--- a/src/screens/UsernameSetup.tsx
++++ b/src/screens/UsernameSetup.tsx
+@@ -1,5 +1,6 @@
+ import React, { useState } from 'react'
+-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
++import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
++import { useCustomAlert, showAlert } from './CustomAlert'
+ 
+ interface Props {
+   wallet: string
+@@ -7,6 +8,7 @@ interface Props {
+ }
+ 
+ export default function UsernameSetup({ wallet, onComplete }: Props) {
++  const alertModal = useCustomAlert()
+   const [username, setUsername] = useState('')
+   const [saving, setSaving] = useState(false)
+ 
+@@ -22,7 +24,7 @@ export default function UsernameSetup({ wallet, onComplete }: Props) {
+       })
+       onComplete(handle)
+     } catch(e) {
+-      Alert.alert('Error', 'Failed to save username')
++      showAlert('Error', 'Failed to save username')
+     } finally {
+       setSaving(false)
+     }
+@@ -30,6 +32,7 @@ export default function UsernameSetup({ wallet, onComplete }: Props) {
+ 
+   return (
+     <View style={styles.container}>
++      {alertModal}
+       <Text style={styles.title}>Choose Your Username</Text>
+       <Text style={styles.subtitle}>This is how you appear on FootFlirt</Text>
+       <TextInput
+diff --git a/src/supabase.ts b/src/supabase.ts
+new file mode 100644
+index 0000000..7bcd344
+--- /dev/null
++++ b/src/supabase.ts
+@@ -0,0 +1,14 @@
++import { createClient } from '@supabase/supabase-js'
++import AsyncStorage from '@react-native-async-storage/async-storage'
++
++const SUPABASE_URL = 'https://twqobdqejgbffrlczleh.supabase.co'
++const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A'
++
++export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
++  auth: {
++    storage: AsyncStorage,
++    autoRefreshToken: true,
++    persistSession: true,
++    detectSessionInUrl: false,
++  },
++})
