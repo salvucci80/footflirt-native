@@ -14,10 +14,11 @@ export default function HomeScreen({ onConnect }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  async function connectWallet() {
+ async function connectWallet() {
     setConnecting(true)
     try {
       const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+      const { PublicKey } = await import('@solana/web3.js')
       const result = await transact(async (wallet: any) => {
         const auth = await wallet.authorize({
           cluster: 'mainnet-beta',
@@ -29,8 +30,11 @@ export default function HomeScreen({ onConnect }: Props) {
         })
         return auth
       })
-      const address = result.accounts[0].address
-      const authToken = result.auth_token
+      const account = result.accounts[0]
+      const address = account.address instanceof Uint8Array
+        ? new PublicKey(account.address).toBase58()
+        : String(account.address)
+      const authToken = result.auth_token || result.authToken || ''
       onConnect(address, authToken)
     } catch (e: any) {
       showAlert('Connection Error', e?.message || 'Failed to connect wallet. Make sure you have a Solana wallet app installed (Phantom, Solflare, etc).')
@@ -38,7 +42,6 @@ export default function HomeScreen({ onConnect }: Props) {
       setConnecting(false)
     }
   }
-
   async function handleEmailLogin() {
     if (!email.trim() || !password.trim()) {
       showAlert('Missing fields', 'Please enter your email and password.')

@@ -19,7 +19,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
   const [loading, setLoading] = useState(true)
   const [commentPost, setCommentPost] = useState<string|null>(null)
   const [commentText, setCommentText] = useState('')
-  const [commentName, setCommentName] = useState('')
   const [comments, setComments] = useState<Record<string,any[]>>({})
   const [stickerPost, setStickerPost] = useState<string|null>(null)
   const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
@@ -40,11 +39,11 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
   }
 
   async function submitComment(postId: string) {
-    if (!commentText.trim() || !commentName.trim()) return
+    if (!commentText.trim() || !wallet) return
     await fetch(`https://footflirt.app/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username: commentName, content: commentText})
+      body: JSON.stringify({username content: commentText})
     })
     setCommentText('')
     loadComments(postId)
@@ -244,13 +243,7 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
                       <Text style={styles.commentContent}>{c.content}</Text>
                     </View>
                   ))}
-                  <TextInput
-                    style={styles.commentInput}
-                    placeholder="Your name..."
-                    placeholderTextColor="#998aaa"
-                    value={commentName}
-                    onChangeText={setCommentName}
-                  />
+                 
                   <TextInput
                     style={styles.commentInput}
                     placeholder="Add a comment..."
