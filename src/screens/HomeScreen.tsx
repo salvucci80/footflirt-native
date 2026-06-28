@@ -30,10 +30,16 @@ export default function HomeScreen({ onConnect }: Props) {
         })
         return auth
       })
-      const account = result.accounts[0]
-      const address = account.address instanceof Uint8Array
-        ? new PublicKey(account.address).toBase58()
-        : String(account.address)
+            const account = result.accounts[0]
+      let address: string
+      if (account.address instanceof Uint8Array) {
+        address = new PublicKey(account.address).toBase58()
+      } else if (typeof account.address === 'string' && account.address.length === 44 && !account.address.includes('+') && !account.address.includes('/')) {
+        address = account.address
+      } else {
+        const bytes = Uint8Array.from(atob(String(account.address)), c => c.charCodeAt(0))
+        address = new PublicKey(bytes).toBase58()
+      }
       const authToken = result.auth_token || result.authToken || ''
       onConnect(address, authToken)
     } catch (e: any) {
