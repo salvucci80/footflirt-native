@@ -1,9 +1,11 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share } from 'react-native'
+import { showAlert } from './CustomAlert'
 
 interface Props {
   wallet: string
   authToken: string
+  username: string
   onViewProfile: (username: string) => void
 }
 
@@ -14,7 +16,7 @@ const CATS = ['nail_art','shape_arch','softness','vibe','shoe_pairing']
 const BASE_URL = 'https://footflirt.app/'
 const STARTER_STICKERS = ['startera.png','starterb.png','starterc.png','starterd.png','startere.png','starterf.png']
 
-export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) {
+export default function FeedScreen({ wallet, authToken, username, onViewProfile }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [commentPost, setCommentPost] = useState<string|null>(null)
@@ -39,18 +41,18 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
   }
 
   async function submitComment(postId: string) {
-    if (!commentText.trim() || !wallet) return
+    if (!commentText.trim()) return
     await fetch(`https://footflirt.app/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username: wallet, content: commentText})
+      body: JSON.stringify({username, content: commentText})
     })
     setCommentText('')
     loadComments(postId)
   }
 
   async function reportPost(postId: string) {
-    Alert.alert('Report Post', 'Why are you reporting this?', [
+    showAlert('Report Post', 'Why are you reporting this?', [
       {text: 'Nudity', onPress: () => sendReport(postId, 'Nudity')},
       {text: 'Spam', onPress: () => sendReport(postId, 'Spam')},
       {text: 'Inappropriate', onPress: () => sendReport(postId, 'Inappropriate')},
@@ -65,9 +67,9 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({post_id: postId, reason})
       })
-      Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
+      showAlert('Reported', 'Thank you for your report.', [{text: 'OK'}])
     } catch(e) {
-      Alert.alert('Error', 'Failed to report.')
+      showAlert('Error', 'Failed to report.')
     }
   }
 
@@ -81,7 +83,7 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
   }
 
   async function tipUser(post: any) {
-    Alert.alert('Tip', 'How much SOL would you like to tip?', [
+    showAlert('Tip', 'How much SOL would you like to tip?', [
       {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
       {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
       {text: '0.1 SOL', onPress: () => sendTip(post, 0.1)},
@@ -97,10 +99,10 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-   const authResult = await walletAdapter.authorize({
-  cluster: 'mainnet-beta',
-  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-})
+      const authResult = await walletAdapter.authorize({
+        cluster: 'mainnet-beta',
+        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
+      })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = new PublicKey(authResult.accounts[0].address)
@@ -118,10 +120,10 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
       const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
       const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
       await connection.confirmTransaction(sig)
-      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
+      showAlert('Tip sent!', `${amount} SOL sent successfully!`)
     })
   } catch(e: any) {
-    Alert.alert('Tip Error', String(e?.message || e))
+    showAlert('Tip Error', String(e?.message || e))
   }
   }
 
@@ -174,9 +176,9 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
                 <TouchableOpacity onPress={()=>onViewProfile(post.username || '@anonymous')}>
                   <Text style={styles.username}>{post.username || '@anonymous'}</Text>
                 </TouchableOpacity>
-<TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
-  <Text style={styles.tipText}>💰 Tip</Text>
-</TouchableOpacity>
+                <TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
+                  <Text style={styles.tipText}>💰 Tip</Text>
+                </TouchableOpacity>
               </View>
 
               {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
@@ -243,7 +245,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
                       <Text style={styles.commentContent}>{c.content}</Text>
                     </View>
                   ))}
-                 
                   <TextInput
                     style={styles.commentInput}
                     placeholder="Add a comment..."
@@ -344,4 +345,3 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 })
-
