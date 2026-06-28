@@ -25,7 +25,7 @@ export default function HomeScreen({ onConnect }: Props) {
           identity: {
             name: 'FootFlirt',
             uri: 'https://footflirt.app',
-            icon: '/icon.png'
+            icon: 'https://footflirt.app/icon.png'
           }
         })
         return auth
