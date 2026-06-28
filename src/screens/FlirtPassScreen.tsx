@@ -25,7 +25,7 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
     await transact(async (walletAdapter: any) => {
     const authResult = await walletAdapter.authorize({
   cluster: 'mainnet-beta',
-  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'https://footflirt.app/icon.png' }
+  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
 })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
