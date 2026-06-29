@@ -31,15 +31,21 @@ export default function HomeScreen({ onConnect }: Props) {
         return auth
       })
             const account = result.accounts[0]
-      let address: string
-      if (account.address instanceof Uint8Array) {
-        address = new PublicKey(account.address).toBase58()
-      } else if (typeof account.address === 'string' && account.address.length === 44 && !account.address.includes('+') && !account.address.includes('/')) {
-        address = account.address
-      } else {
-        const bytes = Uint8Array.from(atob(String(account.address)), c => c.charCodeAt(0))
-        address = new PublicKey(bytes).toBase58()
+         const raw = account.address
+      const toBytes = (b64: string) => {
+        const bin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
+        const bytes = []
+        for (let i = 0; i < b64.length; i += 4) {
+          const a = bin.indexOf(b64[i]), b = bin.indexOf(b64[i+1]), c = bin.indexOf(b64[i+2]), d = bin.indexOf(b64[i+3])
+          bytes.push((a << 2) | (b >> 4))
+          if (c !== 64) bytes.push(((b & 15) << 4) | (c >> 2))
+          if (d !== 64) bytes.push(((c & 3) << 6) | d)
+        }
+        return new Uint8Array(bytes)
       }
+      const address = raw instanceof Uint8Array
+        ? new PublicKey(raw).toBase58()
+        : new PublicKey(toBytes(String(raw))).toBase58()
       const authToken = result.auth_token || result.authToken || ''
       onConnect(address, authToken)
     } catch (e: any) {
