@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { useCustomAlert, showAlert } from './CustomAlert'
-import { supabase } from './supabase'
+import { supabase } from '../supabase'
+import { addressToPublicKey } from '../lib/walletAddress'
 
 interface Props {
   onConnect: (wallet: string, authToken: string) => void
@@ -14,7 +15,7 @@ export default function HomeScreen({ onConnect }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
- async function connectWallet() {
+  async function connectWallet() {
     setConnecting(true)
     try {
       const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
@@ -30,22 +31,8 @@ export default function HomeScreen({ onConnect }: Props) {
         })
         return auth
       })
-            const account = result.accounts[0]
-         const raw = account.address
-      const toBytes = (b64: string) => {
-        const bin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/='
-        const bytes = []
-        for (let i = 0; i < b64.length; i += 4) {
-          const a = bin.indexOf(b64[i]), b = bin.indexOf(b64[i+1]), c = bin.indexOf(b64[i+2]), d = bin.indexOf(b64[i+3])
-          bytes.push((a << 2) | (b >> 4))
-          if (c !== 64) bytes.push(((b & 15) << 4) | (c >> 2))
-          if (d !== 64) bytes.push(((c & 3) << 6) | d)
-        }
-        return new Uint8Array(bytes)
-      }
-      const address = raw instanceof Uint8Array
-        ? new PublicKey(raw).toBase58()
-        : new PublicKey(toBytes(String(raw))).toBase58()
+      const account = result.accounts[0]
+      const address = addressToPublicKey(account.address, PublicKey).toBase58()
       const authToken = result.auth_token || result.authToken || ''
       onConnect(address, authToken)
     } catch (e: any) {
@@ -54,6 +41,7 @@ export default function HomeScreen({ onConnect }: Props) {
       setConnecting(false)
     }
   }
+
   async function handleEmailLogin() {
     if (!email.trim() || !password.trim()) {
       showAlert('Missing fields', 'Please enter your email and password.')

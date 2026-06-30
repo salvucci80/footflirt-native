@@ -1,5 +1,7 @@
 ﻿import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { showAlert } from './CustomAlert'
+import { addressToPublicKey } from '../lib/walletAddress'
 
 interface Props {
   wallet: string
@@ -23,13 +25,13 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
     const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
     await transact(async (walletAdapter: any) => {
-    const authResult = await walletAdapter.authorize({
-  cluster: 'mainnet-beta',
-  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
-})
+      const authResult = await walletAdapter.authorize({
+        cluster: 'mainnet-beta',
+        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
+      })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+      const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
       const tx = new Transaction().add(
         SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: PRICE_SOL * LAMPORTS_PER_SOL })
       )
@@ -45,10 +47,10 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
         body: JSON.stringify({ wallet_address: wallet, tx_signature: sig })
       })
       setActive(true)
-      Alert.alert('FlirtPass activated!')
+      showAlert('FlirtPass activated!')
     })
   } catch(e: any) {
-    Alert.alert('Subscribe Error', String(e?.message || e))
+    showAlert('Subscribe Error', String(e?.message || e))
   } finally {
     setBuying(false)
   }

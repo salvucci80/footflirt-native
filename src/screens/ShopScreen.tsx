@@ -1,5 +1,7 @@
 ﻿import React from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native'
+import { showAlert } from './CustomAlert'
+import { addressToPublicKey } from '../lib/walletAddress'
 
 interface Props {
   wallet: string
@@ -32,13 +34,13 @@ async function processPurchase(pack: any, authToken: string) {
     const amount = parseFloat(pack.price)
 
     await transact(async (walletAdapter: any) => {
-     const authResult = await walletAdapter.authorize({
-  cluster: 'mainnet-beta',
-  identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
-})
+      const authResult = await walletAdapter.authorize({
+        cluster: 'mainnet-beta',
+        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
+      })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+      const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
       const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
       const tx = new Transaction().add(
         SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: amount * LAMPORTS_PER_SOL })
@@ -54,15 +56,15 @@ async function processPurchase(pack: any, authToken: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet_address: authResult.accounts[0].address, pack_id: pack.id, tx_signature: sig })
       })
-      Alert.alert('Pack purchased!', pack.name + ' is now in your collection!')
+      showAlert('Pack purchased!', pack.name + ' is now in your collection!')
     })
   } catch(e: any) {
-    Alert.alert('Purchase Error', String(e?.message || e))
+    showAlert('Purchase Error', String(e?.message || e))
   }
 }
 
 async function buyPack(pack: any, authToken: string) {
-  Alert.alert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
+  showAlert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
     {text: 'Buy Now', onPress: () => processPurchase(pack, authToken)},
     {text: 'Cancel', style: 'cancel'},
   ])

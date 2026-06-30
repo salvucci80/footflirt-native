@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share } from 'react-native'
 import { showAlert } from './CustomAlert'
+import { addressToPublicKey } from '../lib/walletAddress'
 
 interface Props {
   wallet: string
@@ -105,7 +106,7 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
       })
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+      const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
       const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
       const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
       const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
@@ -176,9 +177,9 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
                 <TouchableOpacity onPress={()=>onViewProfile(post.username || '@anonymous')}>
                   <Text style={styles.username}>{post.username || '@anonymous'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
-                  <Text style={styles.tipText}>💰 Tip</Text>
-                </TouchableOpacity>
+<TouchableOpacity style={styles.tipBtn} onPress={()=>tipUser(post)}>
+  <Text style={styles.tipText}>💰 Tip</Text>
+</TouchableOpacity>
               </View>
 
               {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
@@ -345,3 +346,4 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 })
+
