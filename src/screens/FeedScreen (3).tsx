@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share } from 'react-native'
+﻿import React, { useEffect, useRef, useState } from 'react'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -26,6 +26,8 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   const [stickerPost, setStickerPost] = useState<string|null>(null)
   const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
   const [votes, setVotes] = useState<Record<string,number>>({})
+  const [tipPost, setTipPost] = useState<any|null>(null)
+  const [customAmount, setCustomAmount] = useState('')
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=20')
@@ -83,13 +85,9 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
     })
   }
 
-  async function tipUser(post: any) {
-    showAlert('Tip', 'How much SOL would you like to tip?', [
-      {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
-      {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
-      {text: '0.1 SOL', onPress: () => sendTip(post, 0.1)},
-      {text: 'Cancel', style: 'cancel'},
-    ])
+  function tipUser(post: any) {
+    setCustomAmount('')
+    setTipPost(post)
   }
 
   async function sendTip(post: any, amount: number) {
@@ -262,6 +260,44 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
           </View>
         )
       })}
+
+      <Modal visible={!!tipPost} transparent animationType="fade" onRequestClose={() => setTipPost(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <View style={styles.tipModal}>
+            <Text style={styles.tipModalTitle}>💰 Send a Tip</Text>
+            <Text style={styles.tipModalSub}>Quick amounts (SOL)</Text>
+            <View style={styles.tipPresets}>
+              {[0.01, 0.05, 0.1, 0.25].map(amt => (
+                <TouchableOpacity key={amt} style={styles.presetBtn} onPress={() => { setTipPost(null); sendTip(tipPost, amt) }}>
+                  <Text style={styles.presetText}>{amt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.tipModalSub}>Custom amount</Text>
+            <TextInput
+              style={styles.tipInput}
+              placeholder="0.00"
+              placeholderTextColor="#555"
+              keyboardType="decimal-pad"
+              value={customAmount}
+              onChangeText={setCustomAmount}
+            />
+            <View style={styles.tipActions}>
+              <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setTipPost(null)}>
+                <Text style={styles.tipCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.tipSendBtn} onPress={() => {
+                const amt = parseFloat(customAmount)
+                if (!customAmount || isNaN(amt) || amt <= 0) { showAlert('Invalid amount', 'Enter a valid SOL amount.'); return }
+                setTipPost(null)
+                sendTip(tipPost, amt)
+              }}>
+                <Text style={styles.tipSendText}>Send</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   )
 }
@@ -345,5 +381,29 @@ const styles = StyleSheet.create({
     padding: 10, alignItems: 'center',
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.7)', justifyContent: 'center', alignItems: 'center' },
+  tipModal: {
+    backgroundColor: '#1C0030', borderRadius: 20, padding: 24, width: '85%',
+    borderWidth: 1, borderColor: 'rgba(255,45,120,.3)',
+  },
+  tipModalTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16, textAlign: 'center' },
+  tipModalSub: { color: '#998aaa', fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  tipPresets: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  presetBtn: {
+    flex: 1, backgroundColor: 'rgba(255,45,120,.15)', borderWidth: 1,
+    borderColor: 'rgba(255,45,120,.4)', borderRadius: 12, padding: 10, alignItems: 'center',
+  },
+  presetText: { color: '#FF2D78', fontWeight: '700', fontSize: 14 },
+  tipInput: {
+    backgroundColor: '#0d0018', borderWidth: 1, borderColor: 'rgba(255,255,255,.15)',
+    borderRadius: 12, padding: 12, color: '#fff', fontSize: 18, textAlign: 'center', marginBottom: 16,
+  },
+  tipActions: { flexDirection: 'row', gap: 10 },
+  tipCancelBtn: {
+    flex: 1, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 14, alignItems: 'center',
+  },
+  tipCancelText: { color: '#998aaa', fontWeight: '700' },
+  tipSendBtn: { flex: 1, backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, alignItems: 'center' },
+  tipSendText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })
 
