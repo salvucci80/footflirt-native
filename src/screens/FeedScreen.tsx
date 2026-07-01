@@ -28,6 +28,7 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   const [votes, setVotes] = useState<Record<string,number>>({})
   const [tipPost, setTipPost] = useState<any|null>(null)
   const [customAmount, setCustomAmount] = useState('')
+  const [qrModal, setQrModal] = useState<{uri: string, label: string}|null>(null)
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=20')
@@ -90,7 +91,19 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
     setTipPost(post)
   }
 
+  function showSolanaPayQr(recipient: string, amount: number, label: string) {
+    const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent(label)}&message=${encodeURIComponent('Sent via FootFlirt')}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(solanaUrl)}`
+    setQrModal({ uri: qrUrl, label: `Scan with Phantom or Solflare to send ${amount} SOL` })
+  }
+
   async function sendTip(post: any, amount: number) {
+    const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
+    if (wallet.startsWith('email:')) {
+      const recipient = post.wallet_address || FEE_WALLET
+      showSolanaPayQr(recipient, amount, 'FootFlirt Tip')
+      return
+    }
   try {
     const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
     const web3 = await import('@solana/web3.js')
@@ -105,7 +118,6 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
-      const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
       const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
       const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
       const tx = new Transaction()
@@ -260,6 +272,19 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
           </View>
         )
       })}
+
+      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.tipModal}>
+            <Text style={styles.tipModalTitle}>📱 Scan to Pay</Text>
+            {qrModal && <Image source={{uri: qrModal.uri}} style={{width: 220, height: 220, alignSelf: 'center', marginBottom: 16, borderRadius: 12}} />}
+            <Text style={[styles.tipModalSub, {textAlign: 'center', marginBottom: 20}]}>{qrModal?.label}</Text>
+            <TouchableOpacity style={styles.tipSendBtn} onPress={() => setQrModal(null)}>
+              <Text style={styles.tipSendText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!tipPost} transparent animationType="fade" onRequestClose={() => setTipPost(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
