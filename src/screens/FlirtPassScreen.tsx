@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, Image } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -15,9 +15,17 @@ const PRICE_SOL = 0.1
 export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
   const [buying, setBuying] = useState(false)
   const [active, setActive] = useState(false)
+  const [qrModal, setQrModal] = useState<{uri: string}|null>(null)
 
   async function subscribe() {
   setBuying(true)
+  if (wallet.startsWith('email:')) {
+    const solanaUrl = `solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=${encodeURIComponent('FootFlirt Pass')}&message=${encodeURIComponent('FlirtPass Subscription')}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(solanaUrl)}`
+    setQrModal({ uri: qrUrl })
+    setBuying(false)
+    return
+  }
   try {
     const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
     const web3 = await import('@solana/web3.js')
@@ -99,6 +107,19 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
 
         <Text style={styles.disclaimer}>Renews monthly. Cancel anytime by not renewing.</Text>
       </ScrollView>
+
+      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModal}>
+            <Text style={styles.qrTitle}>📱 Scan to Pay</Text>
+            {qrModal && <Image source={{uri: qrModal.uri}} style={{width: 220, height: 220, borderRadius: 12, marginBottom: 16}} />}
+            <Text style={styles.qrSub}>Scan with Phantom or Solflare to pay {PRICE_SOL} SOL for FlirtPass</Text>
+            <TouchableOpacity style={styles.qrBtn} onPress={() => setQrModal(null)}>
+              <Text style={styles.qrBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -132,4 +153,10 @@ const styles = StyleSheet.create({
   },
   subscribeText: { color: '#000', fontSize: 16, fontWeight: '700' },
   disclaimer: { fontSize: 11, color: '#998aaa', textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.7)', justifyContent: 'center', alignItems: 'center' },
+  qrModal: { backgroundColor: '#1C0030', borderRadius: 20, padding: 24, width: '85%', borderWidth: 1, borderColor: 'rgba(255,45,120,.3)', alignItems: 'center' },
+  qrTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  qrSub: { color: '#998aaa', fontSize: 12, textAlign: 'center', marginBottom: 20 },
+  qrBtn: { backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
+  qrBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })
