@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -28,7 +28,7 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   const [votes, setVotes] = useState<Record<string,number>>({})
   const [tipPost, setTipPost] = useState<any|null>(null)
   const [customAmount, setCustomAmount] = useState('')
-  const [qrModal, setQrModal] = useState<{uri: string, label: string}|null>(null)
+  const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=20')
@@ -91,17 +91,12 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
     setTipPost(post)
   }
 
-  function showSolanaPayQr(recipient: string, amount: number, label: string) {
-    const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent(label)}&message=${encodeURIComponent('Sent via FootFlirt')}`
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(solanaUrl)}`
-    setQrModal({ uri: qrUrl, label: `Scan with Phantom or Solflare to send ${amount} SOL` })
-  }
-
   async function sendTip(post: any, amount: number) {
     const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
     if (wallet.startsWith('email:')) {
       const recipient = post.wallet_address || FEE_WALLET
-      showSolanaPayQr(recipient, amount, 'FootFlirt Tip')
+      const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent('FootFlirt Tip')}`
+      setPayModal({ url: solanaUrl, amount })
       return
     }
   try {
@@ -273,14 +268,21 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
         )
       })}
 
-      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+      <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.tipModal}>
-            <Text style={styles.tipModalTitle}>📱 Scan to Pay</Text>
-            {qrModal && <Image source={{uri: qrModal.uri}} style={{width: 220, height: 220, alignSelf: 'center', marginBottom: 16, borderRadius: 12}} />}
-            <Text style={[styles.tipModalSub, {textAlign: 'center', marginBottom: 20}]}>{qrModal?.label}</Text>
-            <TouchableOpacity style={styles.tipSendBtn} onPress={() => setQrModal(null)}>
-              <Text style={styles.tipSendText}>Done</Text>
+            <Text style={styles.tipModalTitle}>💸 Pay with Wallet</Text>
+            <Text style={[styles.tipModalSub, {textAlign:'center', marginBottom: 20}]}>
+              Open your Solana wallet app to send {payModal?.amount} SOL
+            </Text>
+            <TouchableOpacity style={styles.tipSendBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
+              <Text style={styles.tipSendText}>Open Phantom</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tipSendBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(payModal!.url.replace('solana:', 'solflare:')); setPayModal(null) }}>
+              <Text style={styles.tipSendText}>Open Solflare</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setPayModal(null)}>
+              <Text style={styles.tipCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

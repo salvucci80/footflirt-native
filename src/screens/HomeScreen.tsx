@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { useCustomAlert, showAlert } from './CustomAlert'
-import { supabase } from './supabase'
+import { supabase } from '../supabase'
 import { addressToPublicKey } from '../lib/walletAddress'
 
 interface Props {
@@ -33,7 +32,20 @@ export default function HomeScreen({ onConnect }: Props) {
         return auth
       })
       const account = result.accounts[0]
-      const address = addressToPublicKey(account.address, PublicKey).toBase58()
+      let address: string
+      try {
+        address = addressToPublicKey(account.address, PublicKey).toBase58()
+      } catch (decodeErr: any) {
+        showAlert(
+          'Debug: address decode failed',
+          'type=' + typeof account.address +
+          ' isArray=' + Array.isArray(account.address) +
+          ' isUint8Array=' + (account.address instanceof Uint8Array) +
+          ' value=' + JSON.stringify(account.address).slice(0, 300) +
+          ' err=' + (decodeErr?.message || decodeErr)
+        )
+        throw decodeErr
+      }
       const authToken = result.auth_token || result.authToken || ''
       onConnect(address, authToken)
     } catch (e: any) {
