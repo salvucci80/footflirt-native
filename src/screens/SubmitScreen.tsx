@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator, Platform } from 'react-native'
 import { showAlert } from './CustomAlert'
 import * as ImagePicker from 'expo-image-picker'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 
 interface Props {
   wallet: string
