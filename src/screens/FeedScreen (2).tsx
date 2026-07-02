@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -28,6 +28,7 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   const [votes, setVotes] = useState<Record<string,number>>({})
   const [tipPost, setTipPost] = useState<any|null>(null)
   const [customAmount, setCustomAmount] = useState('')
+  const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=20')
@@ -91,6 +92,13 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   }
 
   async function sendTip(post: any, amount: number) {
+    const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
+    if (wallet.startsWith('email:')) {
+      const recipient = post.wallet_address || FEE_WALLET
+      const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent('FootFlirt Tip')}`
+      setPayModal({ url: solanaUrl, amount })
+      return
+    }
   try {
     const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
     const web3 = await import('@solana/web3.js')
@@ -105,7 +113,6 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
 
       const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
       const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
-      const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
       const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
       const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
       const tx = new Transaction()
@@ -260,6 +267,26 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
           </View>
         )
       })}
+
+      <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.tipModal}>
+            <Text style={styles.tipModalTitle}>💸 Pay with Wallet</Text>
+            <Text style={[styles.tipModalSub, {textAlign:'center', marginBottom: 20}]}>
+              Open your Solana wallet app to send {payModal?.amount} SOL
+            </Text>
+            <TouchableOpacity style={styles.tipSendBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
+              <Text style={styles.tipSendText}>Open Phantom</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tipSendBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(payModal!.url.replace('solana:', 'solflare:')); setPayModal(null) }}>
+              <Text style={styles.tipSendText}>Open Solflare</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setPayModal(null)}>
+              <Text style={styles.tipCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!tipPost} transparent animationType="fade" onRequestClose={() => setTipPost(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>

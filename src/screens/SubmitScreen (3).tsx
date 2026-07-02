@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator, Platform } from 'react-native'
 import { showAlert } from './CustomAlert'
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 
 interface Props {
   wallet: string
@@ -67,29 +68,30 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
   try {
     const timestamp = Date.now()
     const filename = `post-${timestamp}.jpg`
+    const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
+    const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`
 
-    let body: any
-    const isWeb = typeof document !== 'undefined'
-    if (isWeb) {
+    if (Platform.OS !== 'web') {
+      await FileSystem.uploadAsync(uploadUrl, image!, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true',
+        },
+      })
+    } else {
       const resp = await fetch(image!)
       const blob = await resp.blob()
       const formData = new FormData()
       formData.append('file', blob, filename)
-      body = formData
-    } else {
-      const formData = new FormData()
-      formData.append('file', { uri: image!, name: filename, type: 'image/jpeg' } as any)
-      body = formData
+      await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Authorization': authHeader, 'x-upsert': 'true' },
+        body: formData,
+      })
     }
-
-    await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`,
-        'x-upsert': 'true',
-      },
-      body,
-    })
 
     const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
     

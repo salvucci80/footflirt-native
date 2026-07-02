@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -28,18 +28,13 @@ const PACKS = [
 const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
 
 export default function ShopScreen({ wallet, authToken }: Props) {
-  const [qrModal, setQrModal] = useState<{uri: string, label: string}|null>(null)
-
-  function showSolanaPayQr(amount: number, label: string) {
-    const solanaUrl = `solana:${FEE_WALLET}?amount=${amount}&label=${encodeURIComponent(label)}&message=${encodeURIComponent('FootFlirt Purchase')}`
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(solanaUrl)}`
-    setQrModal({ uri: qrUrl, label: `Scan with Phantom or Solflare to pay ${amount} SOL` })
-  }
+  const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
   async function processPurchase(pack: any) {
     const amount = parseFloat(pack.price)
     if (wallet.startsWith('email:')) {
-      showSolanaPayQr(amount, 'FootFlirt – ' + pack.name)
+      const solanaUrl = `solana:${FEE_WALLET}?amount=${amount}&label=${encodeURIComponent('FootFlirt – ' + pack.name)}`
+      setPayModal({ url: solanaUrl, amount })
       return
     }
     try {
@@ -123,14 +118,19 @@ export default function ShopScreen({ wallet, authToken }: Props) {
           </View>
         </View>
       ))}
-      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+      <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.qrModal}>
-            <Text style={styles.qrTitle}>📱 Scan to Pay</Text>
-            {qrModal && <Image source={{uri: qrModal.uri}} style={{width: 220, height: 220, alignSelf: 'center', marginBottom: 16, borderRadius: 12}} />}
-            <Text style={styles.qrSub}>{qrModal?.label}</Text>
-            <TouchableOpacity style={styles.qrBtn} onPress={() => setQrModal(null)}>
-              <Text style={styles.qrBtnText}>Done</Text>
+            <Text style={styles.qrTitle}>💸 Pay with Wallet</Text>
+            <Text style={styles.qrSub}>Open your Solana wallet to pay {payModal?.amount} SOL</Text>
+            <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
+              <Text style={styles.qrBtnText}>Open Phantom</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(payModal!.url.replace('solana:', 'solflare:')); setPayModal(null) }}>
+              <Text style={styles.qrBtnText}>Open Solflare</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(null)}>
+              <Text style={[styles.qrBtnText, {color:'#998aaa'}]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

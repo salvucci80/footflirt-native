@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, Image } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
 import { addressToPublicKey } from '../lib/walletAddress'
 
@@ -15,14 +15,12 @@ const PRICE_SOL = 0.1
 export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
   const [buying, setBuying] = useState(false)
   const [active, setActive] = useState(false)
-  const [qrModal, setQrModal] = useState<{uri: string}|null>(null)
+  const [payModal, setPayModal] = useState(false)
 
   async function subscribe() {
   setBuying(true)
   if (wallet.startsWith('email:')) {
-    const solanaUrl = `solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=${encodeURIComponent('FootFlirt Pass')}&message=${encodeURIComponent('FlirtPass Subscription')}`
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(solanaUrl)}`
-    setQrModal({ uri: qrUrl })
+    setPayModal(true)
     setBuying(false)
     return
   }
@@ -108,14 +106,19 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
         <Text style={styles.disclaimer}>Renews monthly. Cancel anytime by not renewing.</Text>
       </ScrollView>
 
-      <Modal visible={!!qrModal} transparent animationType="fade" onRequestClose={() => setQrModal(null)}>
+      <Modal visible={payModal} transparent animationType="fade" onRequestClose={() => setPayModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.qrModal}>
-            <Text style={styles.qrTitle}>📱 Scan to Pay</Text>
-            {qrModal && <Image source={{uri: qrModal.uri}} style={{width: 220, height: 220, borderRadius: 12, marginBottom: 16}} />}
-            <Text style={styles.qrSub}>Scan with Phantom or Solflare to pay {PRICE_SOL} SOL for FlirtPass</Text>
-            <TouchableOpacity style={styles.qrBtn} onPress={() => setQrModal(null)}>
-              <Text style={styles.qrBtnText}>Done</Text>
+            <Text style={styles.qrTitle}>💸 Pay with Wallet</Text>
+            <Text style={styles.qrSub}>Open your Solana wallet to pay {PRICE_SOL} SOL for FlirtPass</Text>
+            <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(`solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
+              <Text style={styles.qrBtnText}>Open Phantom</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(`solflare:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
+              <Text style={styles.qrBtnText}>Open Solflare</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(false)}>
+              <Text style={[styles.qrBtnText, {color:'#998aaa'}]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
