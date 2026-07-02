@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator, Platform } from 'react-native'
 import { showAlert } from './CustomAlert'
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 
 interface Props {
   wallet: string
@@ -70,20 +71,23 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
     const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`
 
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', uploadUrl)
-      xhr.setRequestHeader('Authorization', authHeader)
-      xhr.setRequestHeader('Content-Type', 'image/jpeg')
-      xhr.setRequestHeader('x-upsert', 'true')
-      xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed: ' + xhr.status))
-      xhr.onerror = () => reject(new Error('Upload network error'))
-      if (Platform.OS === 'web') {
-        fetch(image!).then(r => r.blob()).then(blob => xhr.send(blob)).catch(reject)
-      } else {
-        xhr.send({ uri: image!, type: 'image/jpeg', name: filename } as any)
-      }
-    })
+    if (Platform.OS === 'web') {
+      const resp = await fetch(image!)
+      const blob = await resp.blob()
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+        body: blob,
+      })
+      if (!res.ok) throw new Error('Upload failed: ' + res.status)
+    } else {
+      const result = await FileSystem.uploadAsync(uploadUrl, image!, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+      })
+      if (result.status >= 300) throw new Error('Upload failed: ' + result.status)
+    }
 
     const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
     
