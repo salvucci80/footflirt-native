@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, TextInput, ActivityIndicator, Platform } from 'react-native'
 import { showAlert } from './CustomAlert'
 import * as ImagePicker from 'expo-image-picker'
 
@@ -67,20 +67,22 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
   try {
     const timestamp = Date.now()
     const filename = `post-${timestamp}.jpg`
+    const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
+    const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`
 
-    const resp = await fetch(image!)
-    const blob = await resp.blob()
-    const formData = new FormData()
-    formData.append('file', blob, filename)
-    const body = formData
-
-    await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`,
-        'x-upsert': 'true',
-      },
-      body,
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', uploadUrl)
+      xhr.setRequestHeader('Authorization', authHeader)
+      xhr.setRequestHeader('Content-Type', 'image/jpeg')
+      xhr.setRequestHeader('x-upsert', 'true')
+      xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed: ' + xhr.status))
+      xhr.onerror = () => reject(new Error('Upload network error'))
+      if (Platform.OS === 'web') {
+        fetch(image!).then(r => r.blob()).then(blob => xhr.send(blob)).catch(reject)
+      } else {
+        xhr.send({ uri: image!, type: 'image/jpeg', name: filename } as any)
+      }
     })
 
     const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
