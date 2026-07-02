@@ -83,7 +83,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     } else {
       const result = await FileSystem.uploadAsync(uploadUrl, image!, {
         httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        uploadType: 0,
         headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
       })
       if (result.status >= 300) throw new Error('Upload failed: ' + result.status)
