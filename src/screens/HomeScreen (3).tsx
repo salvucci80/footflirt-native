@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+;.limport React, { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { useCustomAlert, showAlert } from './CustomAlert'
 import { supabase } from './supabase'
