@@ -68,19 +68,11 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     const timestamp = Date.now()
     const filename = `post-${timestamp}.jpg`
 
-    let body: any
-    const isWeb = typeof document !== 'undefined'
-    if (isWeb) {
-      const resp = await fetch(image!)
-      const blob = await resp.blob()
-      const formData = new FormData()
-      formData.append('file', blob, filename)
-      body = formData
-    } else {
-      const formData = new FormData()
-      formData.append('file', { uri: image!, name: filename, type: 'image/jpeg' } as any)
-      body = formData
-    }
+    const resp = await fetch(image!)
+    const blob = await resp.blob()
+    const formData = new FormData()
+    formData.append('file', blob, filename)
+    const body = formData
 
     await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`, {
       method: 'POST',
