@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
-import { addressToPublicKey } from '../lib/walletAddress'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
@@ -25,8 +25,6 @@ const PACKS = [
     images:['wilda','wildb','wildc','wildd','wilde','wildf'] },
 ]
 
-const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
-
 export default function ShopScreen({ wallet, authToken }: Props) {
   const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
@@ -38,19 +36,9 @@ export default function ShopScreen({ wallet, authToken }: Props) {
       return
     }
     try {
-      const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-      const web3 = await import('@solana/web3.js')
-      const { transact } = mwaModule
-      const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
-
-      await transact(async (walletAdapter: any) => {
-        const authResult = await walletAdapter.authorize({
-          cluster: 'mainnet-beta',
-          identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
-        })
-
-        const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-        const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
+      await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+        const connection = createConnection(Connection)
+        const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
         const tx = new Transaction().add(
           SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: amount * LAMPORTS_PER_SOL })
         )
@@ -63,7 +51,7 @@ export default function ShopScreen({ wallet, authToken }: Props) {
         await fetch('https://footflirt.app/api/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet_address: authResult.accounts[0].address, pack_id: pack.id, tx_signature: sig })
+          body: JSON.stringify({ wallet_address: wallet, pack_id: pack.id, tx_signature: sig })
         })
         showAlert('Pack purchased!', pack.name + ' is now in your collection!')
       })

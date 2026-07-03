@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
-import { addressToPublicKey } from '../lib/walletAddress'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
@@ -9,7 +9,6 @@ interface Props {
   onBack: () => void
 }
 
-const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
 const PRICE_SOL = 0.1
 
 export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
@@ -25,19 +24,9 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
     return
   }
   try {
-    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const web3 = await import('@solana/web3.js')
-    const { transact } = mwaModule
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
-
-    await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.authorize({
-        cluster: 'mainnet-beta',
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
-      })
-
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
+    await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+      const connection = createConnection(Connection)
+      const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
       const tx = new Transaction().add(
         SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: PRICE_SOL * LAMPORTS_PER_SOL })
       )

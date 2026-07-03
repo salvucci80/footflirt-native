@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native'
 import { useCustomAlert, showAlert } from './CustomAlert'
 import { supabase } from './supabase'
-import { addressToPublicKey } from '../lib/walletAddress'
+import { connectSolanaWallet } from '../lib/solanaWallet'
 
 interface Props {
   onConnect: (wallet: string, authToken: string) => void
@@ -18,38 +18,13 @@ export default function HomeScreen({ onConnect }: Props) {
   async function connectWallet() {
     setConnecting(true)
     try {
-      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-      const { PublicKey } = await import('@solana/web3.js')
-      const result = await transact(async (wallet: any) => {
-        const auth = await wallet.authorize({
-          cluster: 'mainnet-beta',
-          identity: {
-            name: 'FootFlirt',
-            uri: 'https://footflirt.app',
-            icon: 'icon.png'
-          }
-        })
-        return auth
-      })
-      const account = result.accounts[0]
-      let address: string
-      try {
-        address = addressToPublicKey(account.address, PublicKey).toBase58()
-      } catch (decodeErr: any) {
-        showAlert(
-          'Debug: address decode failed',
-          'type=' + typeof account.address +
-          ' isArray=' + Array.isArray(account.address) +
-          ' isUint8Array=' + (account.address instanceof Uint8Array) +
-          ' value=' + JSON.stringify(account.address).slice(0, 300) +
-          ' err=' + (decodeErr?.message || decodeErr)
-        )
-        throw decodeErr
-      }
-      const authToken = result.auth_token || result.authToken || ''
+      const { address, authToken } = await connectSolanaWallet()
       onConnect(address, authToken)
     } catch (e: any) {
-      showAlert('Connection Error', e?.message || 'Failed to connect wallet. Make sure you have a Solana wallet app installed (Phantom, Solflare, etc).')
+      showAlert(
+        'Connection Error',
+        e?.message || 'Failed to connect wallet. Install Phantom or Solflare on Android and try again.'
+      )
     } finally {
       setConnecting(false)
     }
@@ -197,7 +172,7 @@ export default function HomeScreen({ onConnect }: Props) {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => require('react-native').Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
+      <TouchableOpacity onPress={() => Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
         <Text style={{ color: '#998aaa', fontSize: 12, textAlign: 'center' }}>Don't have a wallet? Get Solflare</Text>
       </TouchableOpacity>
     </View>
