@@ -4,7 +4,7 @@ This folder is for **Sal** — step-by-step testing directions and a record of w
 
 ## A note for Sal
 
-Hey Sal — I worked on the Android wallet connect flow on a separate branch so nothing touches your main build. When you have a minute, follow **TESTING.md** on an Android phone with Phantom or Solflare installed. If it all looks good, you can merge the draft PR. If something breaks, just leave a comment on the PR and I’ll fix it. Thanks for letting me help on the app.
+Hey Sal! I put together some wallet connect fixes on a separate branch so your main build stays untouched. Whenever you get a chance, check out **TESTING.md** on an Android phone with Phantom or Solflare — no rush. If everything works, feel free to merge the draft PR. If something's off, just drop a comment on the PR and I'll take a look. Appreciate you letting me jump in on this!
 
 — Morgen
 
