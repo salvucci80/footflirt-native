@@ -101,6 +101,10 @@ if (!postRes.ok) {
   throw new Error(errData.error || 'Post failed: ' + postRes.status)
 }
 onPost()
+ } catch(e: any) {
+    showAlert('Post failed', e?.message || 'Please try again')
+    setPhase('result')
+  }
 }
   if (phase === 'upload') return (
     <View style={styles.container}>
