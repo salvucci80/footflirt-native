@@ -83,7 +83,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     } else {
       const result = await FileSystem.uploadAsync(uploadUrl, image!, {
         httpMethod: 'POST',
-        uploadType: 0,
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
         headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
       })
       if (result.status >= 300) throw new Error('Upload failed: ' + result.status)
@@ -91,16 +91,16 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
 
     const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
     
-    await fetch('https://footflirt.app/api/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
-    })
-    onPost()
-  } catch(e: any) {
-    showAlert('Post failed', e?.message || 'Please try again')
-    setPhase('result')
-  }
+   const postRes = await fetch('https://footflirt.app/api/posts', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
+})
+if (!postRes.ok) {
+  const errData = await postRes.json().catch(() => ({}))
+  throw new Error(errData.error || 'Post failed: ' + postRes.status)
+}
+onPost()
 }
   if (phase === 'upload') return (
     <View style={styles.container}>
