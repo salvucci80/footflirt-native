@@ -69,8 +69,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     const timestamp = Date.now()
     const filename = `post-${timestamp}.jpg`
     const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
-    const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`
-
+    const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMjU0MTEsImV4cCI6MjA5MjgwMTQxMX0.h-2fnQaCCUOvGDHrhaFC6yD7o3HLtgIVaCJxpg7wwxo`
     if (Platform.OS === 'web') {
       const resp = await fetch(image!)
       const blob = await resp.blob()
