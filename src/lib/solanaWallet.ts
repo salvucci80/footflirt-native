@@ -4,7 +4,7 @@ import { addressToPublicKey } from './walletAddress'
 export const APP_IDENTITY = {
   name: 'FootFlirt',
   uri: 'https://footflirt.app',
-  icon: 'https://footflirt.app/icon.png',
+  icon: '/icon.png',
 }
 
 export const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52'
