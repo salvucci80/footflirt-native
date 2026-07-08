@@ -28,37 +28,37 @@ const PACKS = [
 export default function ShopScreen({ wallet, authToken }: Props) {
   const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
-  async function processPurchase(pack: any) {
-    const amount = parseFloat(pack.price)
-    if (wallet.startsWith('email:')) {
-      const solanaUrl = `solana:${FEE_WALLET}?amount=${amount}&label=${encodeURIComponent('FootFlirt – ' + pack.name)}`
-      setPayModal({ url: solanaUrl, amount })
-      return
-    }
-    try {
-      await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
-        const connection = createConnection(Connection)
-        const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
-        const tx = new Transaction().add(
-          SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: amount * LAMPORTS_PER_SOL })
-        )
-        const { blockhash } = await connection.getLatestBlockhash()
-        tx.recentBlockhash = blockhash
-        tx.feePayer = fromPubkey
-        const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
-        const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
-        await connection.confirmTransaction(sig)
-        await fetch('https://footflirt.app/api/purchase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet_address: wallet, pack_id: pack.id, tx_signature: sig })
-        })
-        showAlert('Pack purchased!', pack.name + ' is now in your collection!')
-      })
-    } catch(e: any) {
-      showAlert('Purchase Error', String(e?.message || e))
-    }
+ async function processPurchase(pack: any) {
+  const amount = parseFloat(pack.price)
+  if (wallet.startsWith('email:')) {
+    const solanaUrl = `solana:${FEE_WALLET}?amount=${amount}&label=${encodeURIComponent('FootFlirt – ' + pack.name)}`
+    setPayModal({ url: solanaUrl, amount })
+    return
   }
+  try {
+    await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+      const connection = createConnection(Connection)
+      const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
+      const tx = new Transaction().add(
+        SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: amount * LAMPORTS_PER_SOL })
+      )
+      const { blockhash } = await connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.feePayer = fromPubkey
+      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+      await connection.confirmTransaction(sig)
+      await fetch('https://footflirt.app/api/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: wallet, pack_id: pack.id, tx_signature: sig })
+      })
+      showAlert('Pack purchased!', pack.name + ' is now in your collection!')
+    })
+  } catch(e: any) {
+    showAlert('Purchase Error', String(e?.message || e))
+  }
+}
 
   function buyPack(pack: any) {
     showAlert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
