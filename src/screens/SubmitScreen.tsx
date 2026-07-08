@@ -96,7 +96,7 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
       })
-      if (!postRes.ok) {
+if (!postRes.ok) {
         const errData = await postRes.json().catch(() => ({}))
         throw new Error(errData.error || 'Post failed: ' + postRes.status)
       }
@@ -106,7 +106,6 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
       setPhase('result')
     }
   }
-
   if (phase === 'upload') return (
     <View style={styles.container}>
       <Text style={styles.title}>Share Your Feet</Text>
