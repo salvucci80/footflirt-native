@@ -63,45 +63,49 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
     setPhase('result')
   }
 
- async function post() {
-  setPhase('posting')
-  try {
-    const timestamp = Date.now()
-    const filename = `post-${timestamp}.jpg`
-    const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
-    const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`
+  async function post() {
+    setPhase('posting')
+    try {
+      const timestamp = Date.now()
+      const filename = `post-${timestamp}.jpg`
+      const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
+      const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMjU0MTEsImV4cCI6MjA5MjgwMTQxMX0.h-2fnQaCCUOvGDHrhaFC6yD7o3HLtgIVaCJxpg7wwxo`
 
-    if (Platform.OS === 'web') {
-      const resp = await fetch(image!)
-      const blob = await resp.blob()
-      const res = await fetch(uploadUrl, {
+      if (Platform.OS === 'web') {
+        const resp = await fetch(image!)
+        const blob = await resp.blob()
+        const res = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+          body: blob,
+        })
+        if (!res.ok) throw new Error('Upload failed: ' + res.status)
+      } else {
+        const result = await FileSystem.uploadAsync(uploadUrl, image!, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+          headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+        })
+        if (result.status >= 300) throw new Error('Upload failed: ' + result.status)
+      }
+
+      const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
+
+      const postRes = await fetch('https://footflirt.app/api/posts', {
         method: 'POST',
-        headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
-        body: blob,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
       })
-      if (!res.ok) throw new Error('Upload failed: ' + res.status)
-    } else {
-      const result = await FileSystem.uploadAsync(uploadUrl, image!, {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-        headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
-      })
-      if (result.status >= 300) throw new Error('Upload failed: ' + result.status)
-    }
-
-    const imageUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
-    
-   const postRes = await fetch('https://footflirt.app/api/posts', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
-})
 if (!postRes.ok) {
-  const errData = await postRes.json().catch(() => ({}))
-  throw new Error(errData.error || 'Post failed: ' + postRes.status)
-}
-onPost()
-}
+        const errData = await postRes.json().catch(() => ({}))
+        throw new Error(errData.error || 'Post failed: ' + postRes.status)
+      }
+      onPost()
+    } catch(e: any) {
+      showAlert('Post failed', e?.message || 'Please try again')
+      setPhase('result')
+    }
+  }
   if (phase === 'upload') return (
     <View style={styles.container}>
       <Text style={styles.title}>Share Your Feet</Text>

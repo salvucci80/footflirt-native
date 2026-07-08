@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform, Linking } from 'react-native'
 import { showAlert } from './CustomAlert'
-import { addressToPublicKey } from '../lib/walletAddress'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
@@ -92,45 +92,35 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
   }
 
   async function sendTip(post: any, amount: number) {
-    const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
     if (wallet.startsWith('email:')) {
       const recipient = post.wallet_address || FEE_WALLET
       const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent('FootFlirt Tip')}`
       setPayModal({ url: solanaUrl, amount })
       return
     }
-  try {
-    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const web3 = await import('@solana/web3.js')
-    const { transact } = mwaModule
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
 
-    await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.authorize({
-        cluster: 'mainnet-beta',
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: 'icon.png' }
+    try {
+      await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+        const connection = createConnection(Connection)
+        const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
+        const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
+        const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
+        const tx = new Transaction()
+        if (post.wallet_address) {
+          tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(post.wallet_address), lamports: tipAmount }))
+        }
+        tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: feeAmount }))
+        const { blockhash } = await connection.getLatestBlockhash()
+        tx.recentBlockhash = blockhash
+        tx.feePayer = fromPubkey
+        const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+        const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+        await connection.confirmTransaction(sig)
+        showAlert('Tip sent!', `${amount} SOL sent successfully!`)
       })
-
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = addressToPublicKey(authResult.accounts[0].address, PublicKey)
-      const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
-      const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
-      const tx = new Transaction()
-      if (post.wallet_address) {
-        tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(post.wallet_address), lamports: tipAmount }))
-      }
-      tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: feeAmount }))
-      const { blockhash } = await connection.getLatestBlockhash()
-      tx.recentBlockhash = blockhash
-      tx.feePayer = fromPubkey
-      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
-      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
-      await connection.confirmTransaction(sig)
-      showAlert('Tip sent!', `${amount} SOL sent successfully!`)
-    })
-  } catch(e: any) {
-    showAlert('Tip Error', String(e?.message || e))
-  }
+    } catch (e: any) {
+      showAlert('Tip Error', String(e?.message || e))
+    }
   }
 
   if (loading) return (
