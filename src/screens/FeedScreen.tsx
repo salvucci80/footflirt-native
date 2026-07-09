@@ -77,14 +77,26 @@ export default function FeedScreen({ wallet, authToken, username, onViewProfile 
     }
   }
 
-  async function votePost(postId: string, stars: number) {
-    setVotes(v => ({...v, [postId]: stars}))
-    await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
+async function votePost(postId: string, stars: number) {
+  setVotes(v => ({...v, [postId]: stars}))
+  try {
+    const res = await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({stars})
+      body: JSON.stringify({stars, wallet_address: wallet})
     })
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || 'Vote failed: ' + res.status)
+    }
+    const data = await res.json()
+    setPosts(prev => prev.map(p =>
+      p.id === postId ? { ...p, community_votes: data.community_votes, community_avg: data.community_avg } : p
+    ))
+  } catch (e: any) {
+    showAlert('Vote failed', e?.message || 'Please try again')
   }
+}
 
   function tipUser(post: any) {
     setCustomAmount('')
