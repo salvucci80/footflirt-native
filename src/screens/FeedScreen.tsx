@@ -278,11 +278,8 @@ async function votePost(postId: string, stars: number) {
               Open your Solana wallet app to send {payModal?.amount} SOL
             </Text>
             <TouchableOpacity style={styles.tipSendBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
-              <Text style={styles.tipSendText}>Open Phantom</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.tipSendBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(payModal!.url.replace('solana:', 'solflare:')); setPayModal(null) }}>
-              <Text style={styles.tipSendText}>Open Solflare</Text>
-            </TouchableOpacity>
+  <Text style={styles.tipSendText}>Open Wallet</Text>
+</TouchableOpacity>
             <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setPayModal(null)}>
               <Text style={styles.tipCancelText}>Cancel</Text>
             </TouchableOpacity>
