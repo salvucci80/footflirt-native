@@ -100,15 +100,12 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
           <View style={styles.qrModal}>
             <Text style={styles.qrTitle}>💸 Pay with Wallet</Text>
             <Text style={styles.qrSub}>Open your Solana wallet to pay {PRICE_SOL} SOL for FlirtPass</Text>
-            <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(`solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
-              <Text style={styles.qrBtnText}>Open Phantom</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'#C800FF', marginTop: 8}]} onPress={() => { Linking.openURL(`solflare:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
-              <Text style={styles.qrBtnText}>Open Solflare</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(false)}>
-              <Text style={[styles.qrBtnText, {color:'#998aaa'}]}>Cancel</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(`solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
+  <Text style={styles.qrBtnText}>Open Wallet</Text>
+</TouchableOpacity>
+<TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(false)}>
+  <Text style={[styles.qrBtnText, {color:'#fff'}]}>Cancel</Text>
+</TouchableOpacity>
           </View>
         </View>
       </Modal>
