@@ -270,22 +270,28 @@ async function votePost(postId: string, stars: number) {
         )
       })}
 
-      <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.tipModal}>
-            <Text style={styles.tipModalTitle}>💸 Pay with Wallet</Text>
-            <Text style={[styles.tipModalSub, {textAlign:'center', marginBottom: 20}]}>
-              Open your Solana wallet app to send {payModal?.amount} SOL
-            </Text>
-            <TouchableOpacity style={styles.tipSendBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
-  <Text style={styles.tipSendText}>Open Wallet</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setPayModal(null)}>
-              <Text style={styles.tipCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+    <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
+  <View style={styles.walletModalOverlay}>
+    <View style={styles.walletModalBox}>
+      <Text style={styles.walletModalHeading}>Send Payment</Text>
+      <Text style={styles.walletModalSubtext}>
+        Send {payModal?.amount} SOL via your wallet app
+      </Text>
+      <TouchableOpacity
+        style={styles.walletModalConfirmBtn}
+        onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}
+      >
+        <Text style={styles.walletModalConfirmLabel}>Continue to Wallet</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.walletModalDismissBtn}
+        onPress={() => setPayModal(null)}
+      >
+        <Text style={styles.walletModalDismissLabel}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
       <Modal visible={!!tipPost} transparent animationType="fade" onRequestClose={() => setTipPost(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
@@ -429,6 +435,14 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 14, alignItems: 'center',
   },
 tipCancelText: { color: '#00FF00', fontWeight: '900', fontSize: 22 },
+walletModalOverlay: { flex: 1, backgroundColor: 'rgba(10,0,20,.85)', justifyContent: 'center', alignItems: 'center' },
+walletModalBox: { backgroundColor: '#2a1a3a', borderRadius: 24, padding: 28, width: '85%', borderWidth: 2, borderColor: '#00FFB2' },
+walletModalHeading: { color: '#00FFB2', fontSize: 20, fontWeight: '900', marginBottom: 12, textAlign: 'center' },
+walletModalSubtext: { color: '#e0d0f0', fontSize: 13, textAlign: 'center', marginBottom: 24 },
+walletModalConfirmBtn: { backgroundColor: '#00FFB2', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 },
+walletModalConfirmLabel: { color: '#0a0015', fontSize: 16, fontWeight: '900' },
+walletModalDismissBtn: { backgroundColor: 'rgba(255,255,255,.1)', borderRadius: 14, padding: 14, alignItems: 'center' },
+walletModalDismissLabel: { color: '#fff', fontSize: 14, fontWeight: '700' },
 tipSendBtn: { flex: 1, backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center' },
 tipSendText: { color: '#00FF00', fontWeight: '900', fontSize: 22 },
 })
