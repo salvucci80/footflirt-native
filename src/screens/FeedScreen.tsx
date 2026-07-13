@@ -428,8 +428,8 @@ const styles = StyleSheet.create({
   tipCancelBtn: {
     flex: 1, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 14, alignItems: 'center',
   },
-tipCancelText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+tipCancelText: { color: '#00FF00', fontWeight: '900', fontSize: 22 },
 tipSendBtn: { flex: 1, backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center' },
-tipSendText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+tipSendText: { color: '#00FF00', fontWeight: '900', fontSize: 22 },
 })
 
