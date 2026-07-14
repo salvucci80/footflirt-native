@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Share, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system/legacy'
 
 interface Props {
   username: string
@@ -27,11 +28,11 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
   }, [wallet, username])
 
   useEffect(() => {
-  fetch('https://footflirt.app/api/profile?wallet=' + wallet)
-    .then(r => r.json())
-    .then(data => { if (data.avatar_url) setAvatarUrl(data.avatar_url) })
-    .catch(() => {})
-}, [wallet])
+    fetch('https://footflirt.app/api/profile?wallet=' + wallet)
+      .then(r => r.json())
+      .then(data => { if (data.avatar_url) setAvatarUrl(data.avatar_url) })
+      .catch(() => {})
+  }, [wallet])
 
   useEffect(() => {
     fetch('https://footflirt.app/api/extras?action=referral&username=' + encodeURIComponent(username))
@@ -56,40 +57,42 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
   }, [username])
 
   async function uploadAvatar() {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-  if (!perm.granted) return
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-  })
-  if (result.canceled) return
-  try {
-    const uri = result.assets[0].uri
-    const timestamp = Date.now()
-    const filename = `avatar-${wallet}-${timestamp}.jpg`
-    const formData = new FormData()
-    formData.append('file', { uri, name: filename, type: 'image/jpeg' } as any)
-    await fetch(`https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMDI0NDgsImV4cCI6MjA2MTg3ODQ0OH0.dBFQ8Gz2-KNRawTMPUMNcoN76WZFCoBGVGisPq4GZ2A`,
-        'x-upsert': 'true',
-      },
-      body: formData,
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) return
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     })
-    const url = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
-    await fetch('https://footflirt.app/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet_address: wallet, avatar_url: url })
-    })
-    setAvatarUrl(url)
-  } catch(e) {
-    Alert.alert('Failed to upload photo')
+    if (result.canceled) return
+    try {
+      const uri = result.assets[0].uri
+      const timestamp = Date.now()
+      const filename = `avatar-${wallet}-${timestamp}.jpg`
+      const uploadUrl = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/posts/${filename}`
+      const authHeader = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3cW9iZHFlamdiZmZybGN6bGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMjU0MTEsImV4cCI6MjA5MjgwMTQxMX0.h-2fnQaCCUOvGDHrhaFC6yD7o3HLtgIVaCJxpg7wwxo`
+
+      const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: { 'Authorization': authHeader, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+      })
+      if (uploadResult.status >= 300) throw new Error('Upload failed: ' + uploadResult.status)
+
+      const url = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
+      const profileRes = await fetch('https://footflirt.app/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: wallet, avatar_url: url })
+      })
+      if (!profileRes.ok) throw new Error('Failed to save profile: ' + profileRes.status)
+
+      setAvatarUrl(url)
+    } catch(e: any) {
+      Alert.alert('Failed to upload photo', e?.message || 'Please try again')
+    }
   }
-}
 
   async function toggleFollow() {
     if (isFollowing) {
@@ -122,17 +125,17 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
       <ScrollView>
         <View style={styles.profileTop}>
           <TouchableOpacity onPress={uploadAvatar} style={styles.avatarWrap}>
-  {avatarUrl ? (
-    <Image source={{uri: avatarUrl}} style={styles.avatarImg} />
-  ) : (
-    <View style={styles.avatar}>
-      <Text style={styles.avatarText}>{username.slice(1,3).toUpperCase()}</Text>
-    </View>
-  )}
-  <View style={styles.avatarEdit}>
-    <Ionicons name="camera" size={14} color="#fff" />
-  </View>
-</TouchableOpacity>
+            {avatarUrl ? (
+              <Image source={{uri: avatarUrl}} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{username.slice(1,3).toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.avatarEdit}>
+              <Ionicons name="camera" size={14} color="#fff" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.username}>{username}</Text>
 
           <View style={styles.statsRow}>
@@ -215,13 +218,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 3, borderColor: 'rgba(255,45,120,.3)',
   },
-avatarWrap: { position: 'relative', marginBottom: 12 },
-avatarImg: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: 'rgba(255,45,120,.3)' },
-avatarEdit: {
-  position: 'absolute', bottom: 0, right: 0,
-  backgroundColor: '#FF2D78', borderRadius: 12,
-  width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
-},
+  avatarWrap: { position: 'relative', marginBottom: 12 },
+  avatarImg: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: 'rgba(255,45,120,.3)' },
+  avatarEdit: {
+    position: 'absolute', bottom: 0, right: 0,
+    backgroundColor: '#FF2D78', borderRadius: 12,
+    width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+  },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: '900' },
   username: { fontSize: 22, color: '#fff', fontWeight: '700', marginBottom: 20 },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, width: '100%', justifyContent: 'center' },
