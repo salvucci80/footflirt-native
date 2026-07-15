@@ -33,7 +33,15 @@ jobs:
 
       - name: Fix permissions
         run: chmod +x android/gradlew
-
+      - name: Set up signing keystore
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+          cat > android/app/keystore.properties << EOF
+          RELEASE_STORE_FILE=release.keystore
+          RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
+          EOF
       - name: Build APK
         run: cd android && ./gradlew assembleRelease --no-daemon -x lint
         env:
