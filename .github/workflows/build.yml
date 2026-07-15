@@ -1,43 +1,35 @@
 name: Build Android APK
-
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-
       - name: Fix BOM in build.gradle
         run: sed -i '1s/^\xEF\xBB\xBF//' android/app/build.gradle
-
       - name: Fix permissions
         run: chmod +x android/gradlew
-      - name: Set up signing keystore
       - name: Debug password length
         run: |
           echo "Store password length: $(echo -n "${{ secrets.RELEASE_STORE_PASSWORD }}" | wc -c)"
           echo "Key password length: $(echo -n "${{ secrets.RELEASE_KEY_PASSWORD }}" | wc -c)"
+      - name: Set up signing keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
           cat > android/app/keystore.properties << 'EOF'
@@ -50,16 +42,12 @@ jobs:
         run: cd android && ./gradlew assembleRelease --no-daemon -x lint
         env:
           NODE_ENV: production
-
       - name: Check bundle in APK
         run: |
-        
-         cd android/app/build/outputs/apk/release
+          cd android/app/build/outputs/apk/release
           unzip -l app-release.apk | grep -i "bundle\|index.android"
-
       - name: Find APK
         run: find android/app/build -name "*.apk" 2>/dev/null || echo "No APK found"
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
