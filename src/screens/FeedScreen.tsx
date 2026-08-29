@@ -119,6 +119,19 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
       const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
       const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
       await connection.confirmTransaction(sig)
+
+      // Record the tip server-side so it's verified on-chain and reflected in sol_tips_received / leaderboard.
+      await fetch('https://footflirt.app/api/tip?action=confirm', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          post_id: post.id,
+          tx_signature: sig,
+          tipper_wallet: fromPubkey.toString(),
+          amount
+        })
+      })
+
       Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
     })
   } catch(e: any) {
@@ -351,4 +364,3 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 })
-
