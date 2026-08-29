@@ -1,9 +1,12 @@
-﻿import React, { useEffect, useState } from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Alert, Share } from 'react-native'
+﻿import React, { useEffect, useRef, useState } from 'react'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, Share, Modal, KeyboardAvoidingView, Platform, Linking } from 'react-native'
+import { showAlert } from './CustomAlert'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
   authToken: string
+  username: string
   onViewProfile: (username: string) => void
 }
 
@@ -14,16 +17,18 @@ const CATS = ['nail_art','shape_arch','softness','vibe','shoe_pairing']
 const BASE_URL = 'https://footflirt.app/'
 const STARTER_STICKERS = ['startera.png','starterb.png','starterc.png','starterd.png','startere.png','starterf.png']
 
-export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) {
+export default function FeedScreen({ wallet, authToken, username, onViewProfile }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [commentPost, setCommentPost] = useState<string|null>(null)
   const [commentText, setCommentText] = useState('')
-  const [commentName, setCommentName] = useState('')
   const [comments, setComments] = useState<Record<string,any[]>>({})
   const [stickerPost, setStickerPost] = useState<string|null>(null)
   const [placedStickers, setPlacedStickers] = useState<Record<string,string[]>>({})
   const [votes, setVotes] = useState<Record<string,number>>({})
+  const [tipPost, setTipPost] = useState<any|null>(null)
+  const [customAmount, setCustomAmount] = useState('')
+  const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
 
   useEffect(() => {
     fetch('https://footflirt.app/api/feed?sort=top&offset=0&limit=20')
@@ -40,18 +45,18 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
   }
 
   async function submitComment(postId: string) {
-    if (!commentText.trim() || !commentName.trim()) return
+    if (!commentText.trim()) return
     await fetch(`https://footflirt.app/api/posts/${postId}/comments`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({username: commentName, content: commentText})
+      body: JSON.stringify({username, content: commentText})
     })
     setCommentText('')
     loadComments(postId)
   }
 
   async function reportPost(postId: string) {
-    Alert.alert('Report Post', 'Why are you reporting this?', [
+    showAlert('Report Post', 'Why are you reporting this?', [
       {text: 'Nudity', onPress: () => sendReport(postId, 'Nudity')},
       {text: 'Spam', onPress: () => sendReport(postId, 'Spam')},
       {text: 'Inappropriate', onPress: () => sendReport(postId, 'Inappropriate')},
@@ -66,77 +71,81 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({post_id: postId, reason})
       })
-      Alert.alert('Reported', 'Thank you for your report.', [{text: 'OK'}])
+      showAlert('Reported', 'Thank you for your report.', [{text: 'OK'}])
     } catch(e) {
-      Alert.alert('Error', 'Failed to report.')
+      showAlert('Error', 'Failed to report.')
     }
   }
 
-  async function votePost(postId: string, stars: number) {
-    setVotes(v => ({...v, [postId]: stars}))
-    await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
+async function votePost(postId: string, stars: number) {
+  setVotes(v => ({...v, [postId]: stars}))
+  try {
+    const res = await fetch(`https://footflirt.app/api/posts/${postId}/vote`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({stars})
+      body: JSON.stringify({stars, wallet_address: wallet})
     })
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || 'Vote failed: ' + res.status)
+    }
+    const data = await res.json()
+    setPosts(prev => prev.map(p =>
+      p.id === postId ? { ...p, community_votes: data.community_votes, community_avg: data.community_avg } : p
+    ))
+  } catch (e: any) {
+    showAlert('Vote failed', e?.message || 'Please try again')
   }
+}
 
-  async function tipUser(post: any) {
-    Alert.alert('Tip', 'How much SOL would you like to tip?', [
-      {text: '0.01 SOL', onPress: () => sendTip(post, 0.01)},
-      {text: '0.05 SOL', onPress: () => sendTip(post, 0.05)},
-      {text: '0.1 SOL', onPress: () => sendTip(post, 0.1)},
-      {text: 'Cancel', style: 'cancel'},
-    ])
+  function tipUser(post: any) {
+    setCustomAmount('')
+    setTipPost(post)
   }
 
   async function sendTip(post: any, amount: number) {
-  try {
-    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const web3 = await import('@solana/web3.js')
-    const { transact } = mwaModule
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
+    if (wallet.startsWith('email:')) {
+      const recipient = post.wallet_address || FEE_WALLET
+      const solanaUrl = `solana:${recipient}?amount=${amount}&label=${encodeURIComponent('FootFlirt Tip')}`
+      setPayModal({ url: solanaUrl, amount })
+      return
+    }
 
-    await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.reauthorize({
-        auth_token: authToken,
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-      })
+    try {
+      await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+        const connection = createConnection(Connection)
+        const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
+        const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
+        const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
+        const tx = new Transaction()
+        if (post.wallet_address) {
+          tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(post.wallet_address), lamports: tipAmount }))
+        }
+        tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: feeAmount }))
+        const { blockhash } = await connection.getLatestBlockhash()
+        tx.recentBlockhash = blockhash
+        tx.feePayer = fromPubkey
+        const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
+        const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
+        await connection.confirmTransaction(sig)
 
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
-      const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
-      const feeAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.05)
-      const tipAmount = Math.floor(amount * LAMPORTS_PER_SOL * 0.95)
-      const tx = new Transaction()
-      if (post.wallet_address) {
-        tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(post.wallet_address), lamports: tipAmount }))
-      }
-      tx.add(SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: feeAmount }))
-      const { blockhash } = await connection.getLatestBlockhash()
-      tx.recentBlockhash = blockhash
-      tx.feePayer = fromPubkey
-      const signedTxs = await walletAdapter.signTransactions({ transactions: [tx] })
-      const sig = await connection.sendRawTransaction(signedTxs[0].serialize())
-      await connection.confirmTransaction(sig)
-
-      // Record the tip server-side so it's verified on-chain and reflected in sol_tips_received / leaderboard.
-      await fetch('https://footflirt.app/api/tip?action=confirm', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          post_id: post.id,
-          tx_signature: sig,
-          tipper_wallet: fromPubkey.toString(),
-          amount
+        // Record the tip server-side so it's verified on-chain and reflected in sol_tips_received / leaderboard.
+        await fetch('https://footflirt.app/api/tip?action=confirm', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            post_id: post.id,
+            tx_signature: sig,
+            tipper_wallet: fromPubkey.toString(),
+            amount
+          })
         })
-      })
 
-      Alert.alert('Tip sent!', `${amount} SOL sent successfully!`)
-    })
-  } catch(e: any) {
-    Alert.alert('Tip Error', String(e?.message || e))
-  }
+        showAlert('Tip sent!', `${amount} SOL sent successfully!`)
+      })
+    } catch (e: any) {
+      showAlert('Tip Error', String(e?.message || e))
+    }
   }
 
   if (loading) return (
@@ -259,13 +268,6 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
                   ))}
                   <TextInput
                     style={styles.commentInput}
-                    placeholder="Your name..."
-                    placeholderTextColor="#998aaa"
-                    value={commentName}
-                    onChangeText={setCommentName}
-                  />
-                  <TextInput
-                    style={styles.commentInput}
                     placeholder="Add a comment..."
                     placeholderTextColor="#998aaa"
                     value={commentText}
@@ -280,6 +282,67 @@ export default function FeedScreen({ wallet, authToken, onViewProfile }: Props) 
           </View>
         )
       })}
+
+    <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
+  <View style={styles.walletModalOverlay}>
+    <View style={styles.walletModalBox}>
+      <Text style={styles.walletModalHeading}>Send Payment</Text>
+      <Text style={styles.walletModalSubtext}>
+        Send {payModal?.amount} SOL via your wallet app
+      </Text>
+      <TouchableOpacity
+        style={styles.walletModalConfirmBtn}
+        onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}
+      >
+        <Text style={styles.walletModalConfirmLabel}>Continue to Wallet</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.walletModalDismissBtn}
+        onPress={() => setPayModal(null)}
+      >
+        <Text style={styles.walletModalDismissLabel}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+      <Modal visible={!!tipPost} transparent animationType="fade" onRequestClose={() => setTipPost(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <View style={styles.tipModal}>
+            <Text style={styles.tipModalTitle}>💰 Send a Tip</Text>
+            <Text style={styles.tipModalSub}>Quick amounts (SOL)</Text>
+            <View style={styles.tipPresets}>
+              {[0.01, 0.05, 0.1, 0.25].map(amt => (
+                <TouchableOpacity key={amt} style={styles.presetBtn} onPress={() => { setTipPost(null); sendTip(tipPost, amt) }}>
+                  <Text style={styles.presetText}>{amt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.tipModalSub}>Custom amount</Text>
+            <TextInput
+              style={styles.tipInput}
+              placeholder="0.00"
+              placeholderTextColor="#555"
+              keyboardType="decimal-pad"
+              value={customAmount}
+              onChangeText={setCustomAmount}
+            />
+            <View style={styles.tipActions}>
+              <TouchableOpacity style={styles.tipCancelBtn} onPress={() => setTipPost(null)}>
+                <Text style={styles.tipCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.tipSendBtn} onPress={() => {
+                const amt = parseFloat(customAmount)
+                if (!customAmount || isNaN(amt) || amt <= 0) { showAlert('Invalid amount', 'Enter a valid SOL amount.'); return }
+                setTipPost(null)
+                sendTip(tipPost, amt)
+              }}>
+                <Text style={styles.tipSendText}>Send</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   )
 }
@@ -363,4 +426,36 @@ const styles = StyleSheet.create({
     padding: 10, alignItems: 'center',
   },
   commentSubmitText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.7)', justifyContent: 'center', alignItems: 'center' },
+  tipModal: {
+    backgroundColor: '#1C0030', borderRadius: 20, padding: 24, width: '85%',
+    borderWidth: 1, borderColor: 'rgba(255,45,120,.3)',
+  },
+  tipModalTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16, textAlign: 'center' },
+  tipModalSub: { color: '#998aaa', fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  tipPresets: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  presetBtn: {
+    flex: 1, backgroundColor: 'rgba(255,45,120,.15)', borderWidth: 1,
+    borderColor: 'rgba(255,45,120,.4)', borderRadius: 12, padding: 10, alignItems: 'center',
+  },
+  presetText: { color: '#FF2D78', fontWeight: '700', fontSize: 14 },
+  tipInput: {
+    backgroundColor: '#0d0018', borderWidth: 1, borderColor: 'rgba(255,255,255,.15)',
+    borderRadius: 12, padding: 12, color: '#fff', fontSize: 18, textAlign: 'center', marginBottom: 16,
+  },
+  tipActions: { flexDirection: 'row', gap: 10 },
+  tipCancelBtn: {
+    flex: 1, backgroundColor: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 14, alignItems: 'center',
+  },
+  tipCancelText: { color: '#998aaa', fontWeight: '700' },
+  walletModalOverlay: { flex: 1, backgroundColor: 'rgba(10,0,20,.85)', justifyContent: 'center', alignItems: 'center' },
+  walletModalBox: { backgroundColor: '#2a1a3a', borderRadius: 24, padding: 28, width: '85%', borderWidth: 2, borderColor: '#00FFB2' },
+  walletModalHeading: { color: '#00FFB2', fontSize: 20, fontWeight: '900', marginBottom: 12, textAlign: 'center' },
+  walletModalSubtext: { color: '#e0d0f0', fontSize: 13, textAlign: 'center', marginBottom: 24 },
+  walletModalConfirmBtn: { backgroundColor: '#00FFB2', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 },
+  walletModalConfirmLabel: { color: '#0a0015', fontSize: 16, fontWeight: '900' },
+  walletModalDismissBtn: { backgroundColor: 'rgba(255,255,255,.1)', borderRadius: 14, padding: 14, alignItems: 'center' },
+  walletModalDismissLabel: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  tipSendBtn: { flex: 1, backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center' },
+  tipSendText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })

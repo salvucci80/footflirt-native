@@ -1,12 +1,15 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+﻿import React, { useState } from 'react'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native'
+import { useCustomAlert, showAlert } from './CustomAlert'
 import { supabase } from '../supabase'
+import { connectSolanaWallet } from '../lib/solanaWallet'
 
 interface Props {
   onConnect: (wallet: string, authToken: string) => void
 }
 
 export default function HomeScreen({ onConnect }: Props) {
+  const alertModal = useCustomAlert()
   const [mode, setMode] = useState<'main'|'email-login'|'email-signup'>('main')
   const [connecting, setConnecting] = useState(false)
   const [email, setEmail] = useState('')
@@ -15,23 +18,13 @@ export default function HomeScreen({ onConnect }: Props) {
   async function connectWallet() {
     setConnecting(true)
     try {
-      const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-      const result = await transact(async (wallet: any) => {
-        const auth = await wallet.authorize({
-          cluster: 'mainnet-beta',
-          identity: {
-            name: 'FootFlirt',
-            uri: 'https://footflirt.app',
-            icon: '/icon.png'
-          }
-        })
-        return auth
-      })
-      const address = result.accounts[0].address
-      const authToken = result.auth_token
+      const { address, authToken } = await connectSolanaWallet()
       onConnect(address, authToken)
     } catch (e: any) {
-      Alert.alert('Connection Error', e?.message || 'Failed to connect wallet. Make sure you have a Solana wallet app installed (Phantom, Solflare, etc).')
+      showAlert(
+        'Connection Error',
+        e?.message || 'Failed to connect wallet. Install Phantom or Solflare on Android and try again.'
+      )
     } finally {
       setConnecting(false)
     }
@@ -39,14 +32,14 @@ export default function HomeScreen({ onConnect }: Props) {
 
   async function handleEmailLogin() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.')
+      showAlert('Missing fields', 'Please enter your email and password.')
       return
     }
     setConnecting(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (error) {
-        Alert.alert('Login Failed', error.message)
+        showAlert('Login Failed', error.message)
         return
       }
       const userId = data.user?.id || data.session?.user?.id
@@ -54,7 +47,7 @@ export default function HomeScreen({ onConnect }: Props) {
         onConnect('email:' + userId, data.session?.access_token || '')
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Login failed')
+      showAlert('Error', e?.message || 'Login failed')
     } finally {
       setConnecting(false)
     }
@@ -62,29 +55,29 @@ export default function HomeScreen({ onConnect }: Props) {
 
   async function handleEmailSignup() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.')
+      showAlert('Missing fields', 'Please enter your email and password.')
       return
     }
     if (password.length < 6) {
-      Alert.alert('Weak password', 'Password must be at least 6 characters.')
+      showAlert('Weak password', 'Password must be at least 6 characters.')
       return
     }
     setConnecting(true)
     try {
       const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
       if (error) {
-        Alert.alert('Signup Failed', error.message)
+        showAlert('Signup Failed', error.message)
         return
       }
       if (data.session) {
         const userId = data.user?.id
         onConnect('email:' + userId, data.session.access_token || '')
       } else {
-        Alert.alert('Check your email', 'We sent a confirmation link to ' + email.trim() + '. Please confirm and then log in.')
+        showAlert('Check your email', 'We sent a confirmation link to ' + email.trim() + '. Please confirm and then log in.')
         setMode('email-login')
       }
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Signup failed')
+      showAlert('Error', e?.message || 'Signup failed')
     } finally {
       setConnecting(false)
     }
@@ -94,6 +87,7 @@ export default function HomeScreen({ onConnect }: Props) {
     const isSignup = mode === 'email-signup'
     return (
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {alertModal}
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <Image source={require('../../assets/icon.png')} style={styles.logo} />
           <Text style={styles.title}>FOOTFLIRT</Text>
@@ -146,6 +140,7 @@ export default function HomeScreen({ onConnect }: Props) {
 
   return (
     <View style={styles.container}>
+      {alertModal}
       <Image source={require('../../assets/icon.png')} style={styles.logo} />
       <Text style={styles.title}>FOOTFLIRT</Text>
       <Text style={styles.tagline}>RATE. TIP. FLIRT.</Text>
@@ -177,7 +172,7 @@ export default function HomeScreen({ onConnect }: Props) {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => require('react-native').Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
+      <TouchableOpacity onPress={() => Linking.openURL('https://solflare.com')} style={{ marginTop: 8 }}>
         <Text style={{ color: '#998aaa', fontSize: 12, textAlign: 'center' }}>Don't have a wallet? Get Solflare</Text>
       </TouchableOpacity>
     </View>

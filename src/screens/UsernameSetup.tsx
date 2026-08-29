@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, } from 'react-native'
+import { showAlert } from './CustomAlert'
 
 interface Props {
   wallet: string
@@ -22,7 +23,7 @@ export default function UsernameSetup({ wallet, onComplete }: Props) {
       })
       onComplete(handle)
     } catch(e) {
-      Alert.alert('Error', 'Failed to save username')
+      showAlert('Error', 'Failed to save username')
     } finally {
       setSaving(false)
     }

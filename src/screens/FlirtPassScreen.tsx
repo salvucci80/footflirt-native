@@ -1,5 +1,7 @@
 ﻿import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, Linking } from 'react-native'
+import { showAlert } from './CustomAlert'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
@@ -7,29 +9,24 @@ interface Props {
   onBack: () => void
 }
 
-const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
 const PRICE_SOL = 0.1
 
 export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
   const [buying, setBuying] = useState(false)
   const [active, setActive] = useState(false)
+  const [payModal, setPayModal] = useState(false)
 
   async function subscribe() {
   setBuying(true)
+  if (wallet.startsWith('email:')) {
+    setPayModal(true)
+    setBuying(false)
+    return
+  }
   try {
-    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const web3 = await import('@solana/web3.js')
-    const { transact } = mwaModule
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
-
-    await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.reauthorize({
-        auth_token: authToken,
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-      })
-
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
+    await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+      const connection = createConnection(Connection)
+      const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
       const tx = new Transaction().add(
         SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: PRICE_SOL * LAMPORTS_PER_SOL })
       )
@@ -45,10 +42,10 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
         body: JSON.stringify({ wallet_address: wallet, tx_signature: sig })
       })
       setActive(true)
-      Alert.alert('FlirtPass activated!')
+      showAlert('FlirtPass activated!')
     })
   } catch(e: any) {
-    Alert.alert('Subscribe Error', String(e?.message || e))
+    showAlert('Subscribe Error', String(e?.message || e))
   } finally {
     setBuying(false)
   }
@@ -97,6 +94,21 @@ export default function FlirtPassScreen({ wallet, authToken, onBack }: Props) {
 
         <Text style={styles.disclaimer}>Renews monthly. Cancel anytime by not renewing.</Text>
       </ScrollView>
+
+      <Modal visible={payModal} transparent animationType="fade" onRequestClose={() => setPayModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModal}>
+            <Text style={styles.qrTitle}>💸 Pay with Wallet</Text>
+            <Text style={styles.qrSub}>Open your Solana wallet to pay {PRICE_SOL} SOL for FlirtPass</Text>
+          <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(`solana:${FEE_WALLET}?amount=${PRICE_SOL}&label=FlirtPass`); setPayModal(false) }}>
+  <Text style={styles.qrBtnText}>Open Wallet</Text>
+</TouchableOpacity>
+<TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(false)}>
+  <Text style={[styles.qrBtnText, {color:'#fff'}]}>Cancel</Text>
+</TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -130,4 +142,10 @@ const styles = StyleSheet.create({
   },
   subscribeText: { color: '#000', fontSize: 16, fontWeight: '700' },
   disclaimer: { fontSize: 11, color: '#998aaa', textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.7)', justifyContent: 'center', alignItems: 'center' },
+  qrModal: { backgroundColor: '#1C0030', borderRadius: 20, padding: 24, width: '85%', borderWidth: 1, borderColor: 'rgba(255,45,120,.3)', alignItems: 'center' },
+  qrTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  qrSub: { color: '#998aaa', fontSize: 12, textAlign: 'center', marginBottom: 20 },
+  qrBtn: { backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
+  qrBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })

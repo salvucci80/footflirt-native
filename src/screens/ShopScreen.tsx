@@ -1,5 +1,7 @@
-﻿import React from 'react'
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+﻿import React, { useState } from 'react'
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native'
+import { showAlert } from './CustomAlert'
+import { FEE_WALLET, createConnection, withWalletTransaction, walletPubkeyFromAuth } from '../lib/solanaWallet'
 
 interface Props {
   wallet: string
@@ -23,23 +25,20 @@ const PACKS = [
     images:['wilda','wildb','wildc','wildd','wilde','wildf'] },
 ]
 
-async function processPurchase(pack: any, authToken: string) {
+export default function ShopScreen({ wallet, authToken }: Props) {
+  const [payModal, setPayModal] = useState<{url: string, amount: number}|null>(null)
+
+ async function processPurchase(pack: any) {
+  const amount = parseFloat(pack.price)
+  if (wallet.startsWith('email:')) {
+    const solanaUrl = `solana:${FEE_WALLET}?amount=${amount}&label=${encodeURIComponent('FootFlirt – ' + pack.name)}`
+    setPayModal({ url: solanaUrl, amount })
+    return
+  }
   try {
-    const mwaModule = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
-    const web3 = await import('@solana/web3.js')
-    const { transact } = mwaModule
-    const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = web3
-    const amount = parseFloat(pack.price)
-
-    await transact(async (walletAdapter: any) => {
-      const authResult = await walletAdapter.reauthorize({
-        auth_token: authToken,
-        identity: { name: 'FootFlirt', uri: 'https://footflirt.app', icon: '/icon.png' }
-      })
-
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=9e777985-1352-456c-8e9a-09b8d5d3ee52')
-      const fromPubkey = new PublicKey(authResult.accounts[0].address)
-      const FEE_WALLET = 'AkBbqRjjLka9oeCnuXhNH5UqdjfzYoqeh7sh5gnrosP6'
+    await withWalletTransaction(authToken, async ({ walletAdapter, authResult, PublicKey, Connection, Transaction, SystemProgram, LAMPORTS_PER_SOL }) => {
+      const connection = createConnection(Connection)
+      const fromPubkey = walletPubkeyFromAuth(authResult, PublicKey)
       const tx = new Transaction().add(
         SystemProgram.transfer({ fromPubkey, toPubkey: new PublicKey(FEE_WALLET), lamports: amount * LAMPORTS_PER_SOL })
       )
@@ -52,23 +51,22 @@ async function processPurchase(pack: any, authToken: string) {
       await fetch('https://footflirt.app/api/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet_address: authResult.accounts[0].address, pack_id: pack.id, tx_signature: sig })
+        body: JSON.stringify({ wallet_address: wallet, pack_id: pack.id, tx_signature: sig })
       })
-      Alert.alert('Pack purchased!', pack.name + ' is now in your collection!')
+      showAlert('Pack purchased!', pack.name + ' is now in your collection!')
     })
   } catch(e: any) {
-    Alert.alert('Purchase Error', String(e?.message || e))
+    showAlert('Purchase Error', String(e?.message || e))
   }
 }
 
-async function buyPack(pack: any, authToken: string) {
-  Alert.alert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
-    {text: 'Buy Now', onPress: () => processPurchase(pack, authToken)},
-    {text: 'Cancel', style: 'cancel'},
-  ])
-}
+  function buyPack(pack: any) {
+    showAlert('Buy ' + pack.name, 'Cost: ' + pack.price + ' SOL', [
+      {text: 'Buy Now', onPress: () => processPurchase(pack)},
+      {text: 'Cancel', style: 'cancel'},
+    ])
+  }
 
-export default function ShopScreen({ wallet, authToken }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:20}}>
       <Text style={styles.title}>Sticker Shop</Text>
@@ -101,13 +99,27 @@ export default function ShopScreen({ wallet, authToken }: Props) {
               {pack.owned ? 'Free' : pack.price + ' SOL'}
             </Text>
             {!pack.owned && (
-              <TouchableOpacity style={styles.buyBtn} onPress={()=>buyPack(pack, authToken)}>
+              <TouchableOpacity style={styles.buyBtn} onPress={()=>buyPack(pack)}>
                 <Text style={styles.buyText}>Buy Pack</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
       ))}
+      <Modal visible={!!payModal} transparent animationType="fade" onRequestClose={() => setPayModal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModal}>
+            <Text style={styles.qrTitle}>💸 Pay with Wallet</Text>
+            <Text style={styles.qrSub}>Open your Solana wallet to pay {payModal?.amount} SOL</Text>
+           <TouchableOpacity style={styles.qrBtn} onPress={() => { Linking.openURL(payModal!.url); setPayModal(null) }}>
+  <Text style={styles.qrBtnText}>Open Wallet</Text>
+</TouchableOpacity>
+            <TouchableOpacity style={[styles.qrBtn, {backgroundColor:'rgba(255,255,255,.08)', marginTop: 8}]} onPress={() => setPayModal(null)}>
+              <Text style={[styles.qrBtnText, {color:'#998aaa'}]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -134,4 +146,10 @@ const styles = StyleSheet.create({
   price: { fontSize: 15, fontWeight: '700' },
   buyBtn: { backgroundColor: '#FF2D78', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
   buyText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.7)', justifyContent: 'center', alignItems: 'center' },
+  qrModal: { backgroundColor: '#1C0030', borderRadius: 20, padding: 24, width: '85%', borderWidth: 1, borderColor: 'rgba(255,45,120,.3)', alignItems: 'center' },
+  qrTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  qrSub: { color: '#998aaa', fontSize: 12, textAlign: 'center', marginBottom: 20 },
+  qrBtn: { backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
+  qrBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })
