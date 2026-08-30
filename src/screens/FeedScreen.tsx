@@ -130,7 +130,7 @@ async function votePost(postId: string, stars: number) {
         await connection.confirmTransaction(sig)
 
         // Record the tip server-side so it's verified on-chain and reflected in sol_tips_received / leaderboard.
-        await fetch('https://footflirt.app/api/tip?action=confirm', {
+        await fetch('https://footflirt.app/api/extras?action=tip-confirm', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
@@ -459,3 +459,4 @@ const styles = StyleSheet.create({
   tipSendBtn: { flex: 1, backgroundColor: '#FF2D78', borderRadius: 12, padding: 14, alignItems: 'center', justifyContent: 'center' },
   tipSendText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 })
+
