@@ -27,7 +27,7 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
   }
 
   if (viewProfile) {
-    return <>{alertModal}<ProfileScreen username={viewProfile} wallet={wallet} onBack={()=>setViewProfile(null)} /></>
+    return <>{alertModal}<ProfileScreen username={viewProfile} wallet={wallet} authToken={authToken} onBack={()=>setViewProfile(null)} /></>
   }
 
   return (
@@ -47,7 +47,7 @@ export default function MainApp({ wallet, username, authToken, onDisconnect }: P
 
       <View style={styles.main}>
         {tab === 'feed' && <FeedScreen wallet={wallet} authToken={authToken} username={username} onViewProfile={setViewProfile} />}
-        {tab === 'submit' && <SubmitScreen wallet={wallet} onPost={()=>setTab('feed')} />}
+        {tab === 'submit' && <SubmitScreen wallet={wallet} authToken={authToken} onPost={()=>setTab('feed')} />}
         {tab === 'shop' && <ShopScreen wallet={wallet} authToken={authToken} />}
         {tab === 'leaderboard' && <LeaderboardScreen onViewProfile={setViewProfile} />}
       </View>
@@ -142,3 +142,4 @@ const styles = StyleSheet.create({
   },
   profileBtnText: { color: '#C800FF', fontSize: 11, fontWeight: '700' },
 })
+

@@ -6,10 +6,11 @@ import * as FileSystem from 'expo-file-system/legacy'
 
 interface Props {
   wallet: string
+  authToken: string
   onPost: () => void
 }
 
-export default function SubmitScreen({ wallet, onPost }: Props) {
+export default function SubmitScreen({ wallet, authToken, onPost }: Props) {
   const [image, setImage] = useState<string|null>(null)
   const [caption, setCaption] = useState('')
   const [phase, setPhase] = useState<'upload'|'preview'|'judging'|'result'|'posting'>('upload')
@@ -93,12 +94,16 @@ export default function SubmitScreen({ wallet, onPost }: Props) {
 
       const postRes = await fetch('https://footflirt.app/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ image_url: imageUrl, caption, ai_score: score, score_breakdown: breakdown, wallet_address: wallet })
       })
       if (!postRes.ok) {
-        const errData = await postRes.json().catch(() => ({}))
-        throw new Error(errData.error || 'Post failed: ' + postRes.status)
+        const errText = await postRes.text().catch(() => null)
+        console.log('POST /api/posts failed', postRes.status, errText)
+        throw new Error(errText || 'Post failed: ' + postRes.status)
       }
       onPost()
     } catch(e: any) {
@@ -188,3 +193,4 @@ const styles = StyleSheet.create({
   scoreLabel: { fontSize: 24, color: '#FF2D78', fontWeight: '700', marginBottom: 8 },
   verdict: { fontSize: 13, color: '#998aaa', fontStyle: 'italic', textAlign: 'center', marginBottom: 32, paddingHorizontal: 16 },
 })
+

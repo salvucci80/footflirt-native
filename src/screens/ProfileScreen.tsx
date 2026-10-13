@@ -7,12 +7,13 @@ import * as FileSystem from 'expo-file-system/legacy'
 interface Props {
   username: string
   wallet: string
+  authToken: string
   onBack: () => void
 }
 
 const FEET_URL = 'https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/feet%20v.png'
 
-export default function ProfileScreen({ username, wallet, onBack }: Props) {
+export default function ProfileScreen({ username, wallet, authToken, onBack }: Props) {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ totalPosts: 0, avgScore: 0, totalTips: 0 })
@@ -83,10 +84,17 @@ export default function ProfileScreen({ username, wallet, onBack }: Props) {
       const url = `https://twqobdqejgbffrlczleh.supabase.co/storage/v1/object/public/posts/${filename}`
       const profileRes = await fetch('https://footflirt.app/api/profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ wallet_address: wallet, avatar_url: url })
       })
-      if (!profileRes.ok) throw new Error('Failed to save profile: ' + profileRes.status)
+      if (!profileRes.ok) {
+        const errText = await profileRes.text().catch(() => null)
+        console.log('POST /api/profile failed', profileRes.status, errText)
+        throw new Error(errText || 'Failed to save profile: ' + profileRes.status)
+      }
 
       setAvatarUrl(url)
     } catch(e: any) {
@@ -252,3 +260,4 @@ const styles = StyleSheet.create({
   },
   gridScoreText: { color: '#FFD700', fontSize: 10, fontWeight: '700' },
 })
+
