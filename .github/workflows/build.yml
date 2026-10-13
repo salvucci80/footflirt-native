@@ -2,29 +2,50 @@ name: Build Android APK
 on:
   push:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            cmdline-tools;latest
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+
+      - name: Accept Android SDK licenses
+        run: |
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+
       - name: Fix BOM in build.gradle
         run: sed -i '1s/^\xEF\xBB\xBF//' android/app/build.gradle
+
       - name: Fix permissions
         run: chmod +x android/gradlew
+
       - name: Set up signing keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d --ignore-garbage > android/app/release.keystore
@@ -34,10 +55,12 @@ jobs:
           RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
           EOF
+
       - name: Build APK
         run: cd android && ./gradlew assembleRelease --no-daemon
         env:
           NODE_ENV: production
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
