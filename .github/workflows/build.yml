@@ -2,6 +2,8 @@ name: Build Android APK
 on:
   push:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -23,7 +25,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-       with: packages: - cmdline-tools;latest - platform-tools - platforms;android-35 - build-tools;35.0.0
+        with:
+          packages:
+            - cmdline-tools;latest
+            - platform-tools
+            - platforms;android-35
+            - build-tools;35.0.0
 
       - name: Accept Android SDK licenses
         run: |
