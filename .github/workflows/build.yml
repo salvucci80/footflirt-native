@@ -49,12 +49,11 @@ jobs:
       - name: Set up signing keystore
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d --ignore-garbage > android/app/release.keystore
-          cat > android/app/keystore.properties << 'EOF'
-          RELEASE_STORE_FILE=release.keystore
-          RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
-          EOF
+          printf '%s\n' \
+            "RELEASE_STORE_FILE=release.keystore" \
+            "RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }}" \
+            "RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}" \
+            "RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}" > android/app/keystore.properties
 
       - name: Build APK
         run: cd android && ./gradlew assembleRelease --no-daemon
